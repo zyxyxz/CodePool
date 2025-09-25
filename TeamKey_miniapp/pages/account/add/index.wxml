@@ -1,0 +1,55 @@
+<view class="page">
+  <block wx:if="{{needsLogin}}">
+    <view class="card login-card">
+      <view class="login-title">未登录</view>
+      <view class="login-desc">登录后可添加团队账号</view>
+      <button class="button-primary" bindtap="handleGoLogin">返回登录</button>
+    </view>
+  </block>
+
+  <block wx:if="{{!needsLogin}}">
+    <view class="card">
+      <view class="section-title">选择团队</view>
+      <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
+        <view class="picker-value">{{teams[teamIndex] ? teams[teamIndex].name : '暂无团队'}}</view>
+      </picker>
+    </view>
+
+    <view class="card">
+      <view class="section-title">手动添加</view>
+      <view class="form-item">
+        <text class="label">服务名称</text>
+        <input placeholder="例如 GitHub" value="{{form.issuer}}" data-field="issuer" bindinput="handleInput" />
+      </view>
+      <view class="form-item">
+        <text class="label">账号标识</text>
+        <input placeholder="例如 admin@example.com" value="{{form.label}}" data-field="label" bindinput="handleInput" />
+      </view>
+      <view class="form-item">
+        <text class="label">备注 (可选)</text>
+        <input placeholder="可在此填写备注" value="{{form.accountIdentifier}}" data-field="accountIdentifier" bindinput="handleInput" />
+      </view>
+      <view class="form-item">
+        <text class="label">密钥</text>
+        <input placeholder="TOTP Secret" value="{{form.secret}}" data-field="secret" bindinput="handleInput" />
+      </view>
+      <view class="form-row">
+        <view class="form-item half">
+          <text class="label">位数</text>
+          <input type="number" value="{{form.digits}}" data-field="digits" bindinput="handleNumberInput" />
+        </view>
+        <view class="form-item half">
+          <text class="label">周期 (秒)</text>
+          <input type="number" value="{{form.period}}" data-field="period" bindinput="handleNumberInput" />
+        </view>
+      </view>
+      <button class="button-primary" loading="{{submitting}}" bindtap="handleSubmit">保存</button>
+    </view>
+
+    <view class="card">
+      <view class="section-title">扫码导入</view>
+      <view class="scan-desc">支持扫描 otpauth:// 二维码快速导入</view>
+      <button class="button-outline" bindtap="handleScan">扫一扫</button>
+    </view>
+  </block>
+</view>

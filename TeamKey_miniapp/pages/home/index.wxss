@@ -1,0 +1,136 @@
+.page {
+  padding: 16px;
+}
+
+.header .title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2933;
+}
+
+.header .subtitle {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.team-picker {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.team-picker .label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.picker-value {
+  color: #2979ff;
+}
+
+.search-box {
+  margin-top: 12px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+.search-box input {
+  width: 100%;
+}
+
+.content {
+  margin-top: 16px;
+}
+
+.account-card {
+  transition: transform 0.2s;
+}
+
+.account-card:active {
+  transform: scale(0.99);
+}
+
+.account-card .issuer {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.account-card .label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.account-card .code {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #2979ff;
+}
+
+.meta {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.meta .tag {
+  margin-right: 8px;
+}
+
+.progress {
+  margin-top: 8px;
+}
+
+.empty {
+  text-align: center;
+  color: #9ca3af;
+}
+
+.skeleton {
+  text-align: center;
+  color: #9ca3af;
+}
+
+.login-card {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.login-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.login-desc {
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.fab-container {
+  position: fixed;
+  right: 24px;
+  bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fab {
+  background: linear-gradient(135deg, #2979ff, #00bfa5);
+  color: #fff;
+  border-radius: 24px;
+  padding: 12px 20px;
+  font-weight: 600;
+  box-shadow: 0 12px 24px rgba(41, 121, 255, 0.25);
+}
+
+.fab.secondary {
+  background: #ffffff;
+  color: #2979ff;
+  border: 1px solid #2979ff;
+}

@@ -1,0 +1,63 @@
+.page {
+  padding: 16px;
+}
+
+.section-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.form-item {
+  margin-bottom: 14px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-item.half {
+  flex: 1;
+}
+
+.form-item .label {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+input {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.picker-value {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 12px;
+  color: #2979ff;
+}
+
+.scan-desc {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.login-card {
+  text-align: center;
+  margin-top: 60px;
+}
+
+.login-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.login-desc {
+  color: #6b7280;
+  margin-bottom: 16px;
+}

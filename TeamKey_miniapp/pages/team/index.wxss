@@ -1,0 +1,82 @@
+.page {
+  padding: 16px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.subtitle {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.picker-value {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #2979ff;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.member:last-child {
+  border-bottom: none;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #e0f2fe;
+}
+
+.info {
+  flex: 1;
+  margin-left: 12px;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.role {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.meta {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.empty {
+  text-align: center;
+  padding: 12px 0;
+  color: #9ca3af;
+}
+
+.login-card {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.login-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.login-desc {
+  color: #6b7280;
+  margin-bottom: 16px;
+}

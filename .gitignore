@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+
+# Python venv / cache
+.env
+*.env
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.venv/
+.env*/
+
+# FastAPI runtime data
+TeamKey_backend/data/
+
+# Node dependencies / build outputs
+TeamKey_Admin_frontend/node_modules/
+TeamKey_Admin_frontend/dist/
+TeamKey_miniapp/node_modules/
+TeamKey_miniapp/dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / editor
+.idea/
+.vscode/
+
+# Misc
+coverage/

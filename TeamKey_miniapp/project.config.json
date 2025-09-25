@@ -1,0 +1,16 @@
+{
+  "miniprogramRoot": "./",
+  "projectname": "TeamKey",
+  "description": "TeamKey WeChat mini program",
+  "appid": "wx3792c541da8d4086",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "2.33.0",
+  "cloudfunctionRoot": "",
+  "condition": {}
+}

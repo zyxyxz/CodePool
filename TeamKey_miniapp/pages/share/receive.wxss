@@ -1,0 +1,28 @@
+.page {
+  padding: 16px;
+}
+
+.card {
+  text-align: center;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.code {
+  margin: 24px 0;
+  font-size: 32px;
+  letter-spacing: 2px;
+  color: #2979ff;
+}
+
+.meta {
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.error {
+  color: #f43f5e;
+}

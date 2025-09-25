@@ -1,0 +1,72 @@
+.page {
+  padding: 16px;
+}
+
+.hero {
+  text-align: center;
+  background: linear-gradient(135deg, #2979ff, #00bfa5);
+  color: #ffffff;
+}
+
+.hero .issuer {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.hero .label {
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+.hero .code {
+  margin-top: 24px;
+  font-size: 40px;
+  letter-spacing: 4px;
+  font-weight: 700;
+}
+
+.timer {
+  margin-top: 12px;
+}
+
+.actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.info .section {
+  margin-bottom: 16px;
+}
+
+.info .title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2933;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  color: #4b5563;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.shares .share-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+  color: #4b5563;
+}
+
+.shares .share-row:last-child {
+  border-bottom: none;
+}

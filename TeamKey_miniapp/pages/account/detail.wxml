@@ -1,0 +1,41 @@
+<view class="page">
+  <view class="card hero">
+    <view class="issuer">{{account ? account.issuer : ''}}</view>
+    <view class="label">{{account ? account.label : ''}}</view>
+    <view class="code">{{code}}</view>
+    <view class="timer">
+      <text>剩余 {{expiresIn}}s</text>
+      <progress percent="{{progress}}" stroke-width="4" active-color="#00BFA5" />
+    </view>
+    <view class="actions">
+      <button class="button-primary" size="mini" bindtap="handleCopy">复制验证码</button>
+      <button class="button-outline" size="mini" bindtap="handleRefresh">刷新</button>
+    </view>
+  </view>
+
+  <view class="card info">
+    <view class="section">
+      <text class="title">账号信息</text>
+      <view class="row"><text class="label">标识</text><text class="value">{{account && account.accountIdentifier ? account.accountIdentifier : '-'}}</text></view>
+      <view class="row"><text class="label">周期</text><text class="value">{{account ? account.period : ''}} s</text></view>
+      <view class="row"><text class="label">位数</text><text class="value">{{account ? account.digits : ''}}</text></view>
+    </view>
+    <view class="section">
+      <text class="title">快捷操作</text>
+      <view class="button-group">
+        <button class="button-primary" size="mini" bindtap="handleShare">一次性分享</button>
+        <button class="button-outline" size="mini" bindtap="handleDelete">删除账号</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="card shares" wx:if="{{shares.length}}">
+    <view class="section-title">分享记录</view>
+    <block wx:for="{{shares}}" wx:key="id">
+      <view class="share-row">
+        <text>#{{item.id}} {{item.mode}} {{item.used ? '已使用' : '可用'}} </text>
+        <text>{{item.expiresAt}}</text>
+      </view>
+    </block>
+  </view>
+</view>
