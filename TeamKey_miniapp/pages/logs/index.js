@@ -9,6 +9,10 @@ Page({
     loading: true,
     needsLogin: false,
     loginLoading: false,
+    loginProfile: app.getStoredProfile ? app.getStoredProfile() : {
+      nickname: 'TeamKey 用户',
+      avatarUrl: '/assets/avatar-default.png',
+    },
   },
 
   async onShow() {
@@ -18,12 +22,26 @@ Page({
   async initialize() {
     const hasSession = app.globalData.token ? true : await app.tryRestoreSession();
     if (!hasSession && !app.globalData.token) {
-      this.setData({ needsLogin: true, loading: false, logs: [] });
+      const profile = this.prepareLoginProfile();
+      this.setData({ needsLogin: true, loading: false, logs: [], loginProfile: profile });
       return;
     }
     this.setData({ needsLogin: false });
-    const teams = app.globalData.teams || [];
-    const teamIndex = Math.max(0, teams.findIndex((t) => t.teamId === app.globalData.activeTeamId));
+    let teams = [];
+    if (app.globalData.token) {
+      try {
+        teams = await api.fetchTeams();
+        app.globalData.teams = teams;
+      } catch (error) {
+        console.error('fetch teams failed', error);
+        teams = app.globalData.teams || [];
+      }
+    }
+    const activeTeamId = app.globalData.activeTeamId || (teams[0] ? teams[0].teamId : null);
+    const teamIndex = Math.max(0, teams.findIndex((t) => t.teamId === activeTeamId));
+    if (teams[teamIndex]) {
+      app.setActiveTeam(teams[teamIndex].teamId);
+    }
     this.setData({ teams, teamIndex: teamIndex === -1 ? 0 : teamIndex });
     await this.loadLogs();
   },
@@ -32,6 +50,7 @@ Page({
     if (this.data.loginLoading) return;
     this.setData({ loginLoading: true });
     try {
+      app.setStoredProfile(this.data.loginProfile);
       await app.ensureLogin(true);
       this.setData({ needsLogin: false });
       await this.initialize();
@@ -74,5 +93,36 @@ Page({
 
   onPullDownRefresh() {
     this.initialize().finally(() => wx.stopPullDownRefresh());
+  },
+
+  prepareLoginProfile() {
+    if (typeof app.getStoredProfile === 'function') {
+      const profile = app.getStoredProfile();
+      this.setData({ loginProfile: profile });
+      return profile;
+    }
+    const fallback = { nickname: 'TeamKey 用户', avatarUrl: '/assets/avatar-default.png' };
+    this.setData({ loginProfile: fallback });
+    return fallback;
+  },
+
+  async handleChooseProfile() {
+    try {
+      const res = await wx.getUserProfile({ desc: '用于完善账号资料' });
+      const profile = app.setStoredProfile({
+        nickname: res.userInfo.nickName,
+        avatarUrl: res.userInfo.avatarUrl,
+        avatar_url: res.userInfo.avatarUrl,
+      });
+      this.setData({ loginProfile: profile });
+      wx.showToast({ title: '已更新头像昵称', icon: 'none' });
+    } catch (error) {
+      if (error && error.errMsg && error.errMsg.indexOf('cancel') !== -1) {
+        wx.showToast({ title: '已取消授权', icon: 'none' });
+      } else {
+        wx.showToast({ title: '获取信息失败', icon: 'none' });
+        console.error('profile choose failed', error);
+      }
+    }
   },
 });

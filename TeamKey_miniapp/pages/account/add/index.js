@@ -12,6 +12,7 @@ Page({
       secret: '',
       digits: 6,
       period: 30,
+      remark: '',
     },
     submitting: false,
     needsLogin: false,
@@ -57,7 +58,19 @@ Page({
         wx.showToast({ title: '不是有效的 otpauth 链接', icon: 'none' });
         return;
       }
-      await this.submitAccount({ otpauth_url: result });
+      wx.showModal({
+        title: '添加备注',
+        editable: true,
+        placeholderText: '可选，填写备注名称',
+        cancelText: '跳过',
+        success: async (modalRes) => {
+          if (modalRes.confirm) {
+            await this.submitAccount({ otpauth_url: result, remark: modalRes.content });
+          } else {
+            await this.submitAccount({ otpauth_url: result });
+          }
+        },
+      });
     } catch (error) {
       if (error && error.errMsg && error.errMsg.indexOf('cancel') !== -1) {
         return;
@@ -90,6 +103,7 @@ Page({
       account_identifier: accountIdentifier,
       digits: Number(digits) || 6,
       period: Number(period) || 30,
+      remark: this.data.form.remark,
     });
   },
 
@@ -102,6 +116,17 @@ Page({
       await api.createAccount(requestPayload);
       wx.showToast({ title: '添加成功' });
       await app.tryRestoreSession();
+      this.setData({
+        form: {
+          issuer: '',
+          label: '',
+          accountIdentifier: '',
+          secret: '',
+          digits: 6,
+          period: 30,
+          remark: '',
+        },
+      });
       setTimeout(() => {
         wx.navigateBack();
       }, 600);

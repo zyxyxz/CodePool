@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
+from sqlalchemy import cast, func, or_, String
+from sqlalchemy.orm import Session, joinedload
 
 from app.api import deps
 from app.core.security import create_access_token, decode_access_token
@@ -134,23 +135,40 @@ def list_users(
     page_size: int = Query(default=20, ge=1, le=100),
     keyword: str | None = None,
 ):
-    query = db.query(User)
+    query = db.query(User).options(
+        joinedload(User.memberships),
+        joinedload(User.created_accounts),
+    )
     if keyword:
         like = f"%{keyword}%"
         query = query.filter((User.nickname.ilike(like)) | (User.open_id.ilike(like)))
     total = query.count()
-    items = query.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    return {
-        "items": [
+    items = (
+        query.order_by(User.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    response_items = []
+    for user in items:
+        memberships = user.memberships or []
+        created_accounts = user.created_accounts or []
+        response_items.append(
             {
                 "id": user.id,
                 "nickname": user.nickname,
                 "open_id": user.open_id,
+                "avatar_url": user.avatar_url,
                 "last_login_at": user.last_login_at,
                 "created_at": user.created_at,
+                "team_count": len({m.team_id for m in memberships}),
+                "account_count": len(created_accounts),
             }
-            for user in items
-        ],
+        )
+
+    return {
+        "items": response_items,
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -165,23 +183,39 @@ def list_teams_admin(
     page_size: int = Query(default=20, ge=1, le=100),
     keyword: str | None = None,
 ):
-    query = db.query(Team)
+    query = db.query(Team).options(
+        joinedload(Team.owner),
+        joinedload(Team.memberships),
+    )
     if keyword:
         like = f"%{keyword}%"
         query = query.filter(Team.name.ilike(like))
     total = query.count()
-    items = query.order_by(Team.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    return {
-        "items": [
+    items = (
+        query.order_by(Team.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    response_items = []
+    for team in items:
+        memberships = team.memberships or []
+        response_items.append(
             {
                 "id": team.id,
                 "name": team.name,
                 "description": team.description,
                 "owner_id": team.owner_id,
+                "owner_nickname": team.owner.nickname if team.owner else None,
+                "owner_open_id": team.owner.open_id if team.owner else None,
+                "member_count": len(memberships),
                 "created_at": team.created_at,
             }
-            for team in items
-        ],
+        )
+
+    return {
+        "items": response_items,
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -196,7 +230,10 @@ def list_accounts_admin(
     page_size: int = Query(default=20, ge=1, le=100),
     team_id: int | None = None,
 ):
-    query = db.query(Account)
+    query = db.query(Account).options(
+        joinedload(Account.team),
+        joinedload(Account.created_by),
+    )
     if team_id:
         query = query.filter(Account.team_id == team_id)
     total = query.count()
@@ -206,8 +243,13 @@ def list_accounts_admin(
             {
                 "id": account.id,
                 "team_id": account.team_id,
+                "team_name": account.team.name if account.team else None,
                 "issuer": account.issuer,
                 "label": account.label,
+                "account_identifier": account.account_identifier,
+                "remark": account.remark,
+                "created_by_id": account.created_by_id,
+                "created_by_nickname": account.created_by.nickname if account.created_by else None,
                 "created_at": account.created_at,
             }
             for account in items
@@ -224,24 +266,58 @@ def list_audit_logs_admin(
     db: Session = Depends(deps.get_db_session),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=200),
+    team_id: int | None = None,
+    action: str | None = None,
+    keyword: str | None = None,
 ):
-    query = db.query(AuditLog).order_by(AuditLog.created_at.desc())
+    query = (
+        db.query(AuditLog)
+        .options(joinedload(AuditLog.user), joinedload(AuditLog.team))
+        .order_by(AuditLog.created_at.desc())
+    )
+
+    if team_id:
+        query = query.filter(AuditLog.team_id == team_id)
+    if action:
+        query = query.filter(AuditLog.action.ilike(f"%{action}%"))
+    if keyword:
+        like = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                AuditLog.action.ilike(like),
+                AuditLog.target_type.ilike(like),
+                cast(AuditLog.target_id, String).ilike(like),
+                cast(AuditLog.meta, String).ilike(like),
+            )
+        )
+
     total = query.count()
-    items = query.offset((page - 1) * page_size).limit(page_size).all()
-    return {
-        "items": [
+    items = (
+        query.offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    response_items = []
+    for log in items:
+        response_items.append(
             {
                 "id": log.id,
                 "team_id": log.team_id,
+                "team_name": log.team.name if log.team else None,
                 "user_id": log.user_id,
+                "user_nickname": log.user.nickname if log.user else None,
+                "user_open_id": log.user.open_id if log.user else None,
                 "action": log.action,
                 "target_type": log.target_type,
                 "target_id": log.target_id,
                 "meta": log.meta,
                 "created_at": log.created_at,
             }
-            for log in items
-        ],
+        )
+
+    return {
+        "items": response_items,
         "total": total,
         "page": page,
         "page_size": page_size,

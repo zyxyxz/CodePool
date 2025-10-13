@@ -3,6 +3,11 @@
     <view class="card login-card">
       <view class="login-title">需要登录</view>
       <view class="login-desc">登录后管理团队成员</view>
+      <view class="profile-preview">
+        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
+        <text class="nickname">{{loginProfile.nickname || 'TeamKey 用户'}}</text>
+        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
+      </view>
       <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
     </view>
   </block>
@@ -25,7 +30,13 @@
     <view class="card">
       <view class="flex-between">
         <text class="title">成员列表</text>
-        <button class="button-outline" size="mini" bindtap="handleInvite">邀请</button>
+        <view class="actions">
+          <button class="button-outline" size="mini" bindtap="handleInvite">邀请</button>
+          <button class="button-outline" size="mini" open-type="share" wx:if="{{shareInviteToken}}">转发</button>
+        </view>
+      </view>
+      <view class="invite-tip" wx:if="{{shareInviteToken}}">
+        分享邀请有效期至 {{shareInviteExpiresText}}
       </view>
       <block wx:if="{{members.length === 0}}">
         <view class="empty">暂无成员</view>

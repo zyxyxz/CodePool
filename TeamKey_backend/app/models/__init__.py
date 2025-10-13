@@ -5,6 +5,7 @@ from app.models.team_membership import TeamMembership, TeamRole
 from app.models.account import Account, TotpAlgorithm
 from app.models.account_permission import AccountPermission, AccountPermissionType
 from app.models.share import Share, ShareMode
+from app.models.team_invite import TeamInvite, TeamInviteMode
 from app.models.audit import AuditLog
 from app.models.admin_setting import AdminSetting
 
@@ -20,6 +21,8 @@ __all__ = [
     "AccountPermissionType",
     "Share",
     "ShareMode",
+    "TeamInvite",
+    "TeamInviteMode",
     "AuditLog",
     "AdminSetting",
 ]

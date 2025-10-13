@@ -11,6 +11,10 @@ Page({
     ticker: null,
     needsLogin: false,
     loginLoading: false,
+    loginProfile: app.getStoredProfile ? app.getStoredProfile() : {
+      nickname: 'TeamKey 用户',
+      avatarUrl: '/assets/avatar-default.png',
+    },
   },
 
   async onShow() {
@@ -21,7 +25,8 @@ Page({
     this.clearTicker();
     const hasSession = app.globalData.token ? true : await app.tryRestoreSession();
     if (!hasSession && !app.globalData.token) {
-      this.setData({ needsLogin: true, loading: false, accounts: [] });
+      const profile = this.prepareLoginProfile();
+      this.setData({ needsLogin: true, loading: false, accounts: [], loginProfile: profile });
       return;
     }
     this.setData({ needsLogin: false });
@@ -30,9 +35,23 @@ Page({
 
   async bootstrap() {
     try {
-      const { teams, activeTeamId } = app.globalData;
-      const teamIndex = Math.max(0, teams.findIndex((t) => t.teamId === activeTeamId));
-      this.setData({ teams, teamIndex: teamIndex === -1 ? 0 : teamIndex });
+      let teams = [];
+      if (app.globalData.token) {
+        teams = await api.fetchTeams();
+        app.globalData.teams = teams;
+      }
+      const activeTeamId = app.globalData.activeTeamId || (teams[0] ? teams[0].teamId : null);
+      let teamIndex = Math.max(0, teams.findIndex((t) => t.teamId === activeTeamId));
+      if (teamIndex === -1) {
+        teamIndex = 0;
+      }
+      if (teams[teamIndex] && teams[teamIndex].teamId) {
+        app.setActiveTeam(teams[teamIndex].teamId);
+      }
+      this.setData({
+        teams,
+        teamIndex: teams.length ? teamIndex : 0,
+      });
       await this.loadAccounts();
       this.startTicker();
     } catch (error) {
@@ -45,6 +64,7 @@ Page({
     if (this.data.loginLoading) return;
     this.setData({ loginLoading: true });
     try {
+      app.setStoredProfile(this.data.loginProfile);
       await app.ensureLogin(true);
       this.setData({ needsLogin: false });
       await this.bootstrap();
@@ -76,6 +96,37 @@ Page({
     }
   },
 
+  prepareLoginProfile() {
+    if (typeof app.getStoredProfile === 'function') {
+      const profile = app.getStoredProfile();
+      this.setData({ loginProfile: profile });
+      return profile;
+    }
+    const fallback = { nickname: 'TeamKey 用户', avatarUrl: '/assets/avatar-default.png' };
+    this.setData({ loginProfile: fallback });
+    return fallback;
+  },
+
+  async handleChooseProfile() {
+    try {
+      const res = await wx.getUserProfile({ desc: '用于完善账号资料' });
+      const profile = app.setStoredProfile({
+        nickname: res.userInfo.nickName,
+        avatarUrl: res.userInfo.avatarUrl,
+        avatar_url: res.userInfo.avatarUrl,
+      });
+      this.setData({ loginProfile: profile });
+      wx.showToast({ title: '已更新头像昵称', icon: 'none' });
+    } catch (error) {
+      if (error && error.errMsg && error.errMsg.indexOf('cancel') !== -1) {
+        wx.showToast({ title: '已取消授权', icon: 'none' });
+      } else {
+        wx.showToast({ title: '获取信息失败', icon: 'none' });
+        console.error('profile choose failed', error);
+      }
+    }
+  },
+
   startTicker() {
     this.clearTicker();
     if (!this.data.accounts.length) return;
@@ -84,13 +135,15 @@ Page({
         if (!item.code) {
           return item;
         }
-        const remaining = item.expiresIn - 1;
+        const total = Number(item.period) || 30;
+        const remaining = Number(item.expiresIn) - 1;
         if (remaining <= 0) {
           this.fetchCode(item.id);
-          return { ...item, expiresIn: item.period, progress: 0 };
+          return { ...item, expiresIn: total, period: total, progress: 0 };
         }
-        const progress = Math.floor(((item.period - remaining) / item.period) * 100);
-        return { ...item, expiresIn: remaining, progress };
+        const safeRemaining = remaining < 0 ? 0 : remaining;
+        const progress = total ? Math.floor(((total - safeRemaining) / total) * 100) : 0;
+        return { ...item, expiresIn: safeRemaining, progress };
       });
       this.setData({ accounts });
     }, 1000);
@@ -110,17 +163,21 @@ Page({
     }
     try {
       const res = await api.fetchAccounts(team.teamId, this.data.query);
-      const list = Array.isArray(res) ? res : (res.items || []);
-      const accounts = list.map((item) => ({
-        id: item.id,
-        issuer: item.issuer,
-        label: item.label,
-        accountIdentifier: item.accountIdentifier,
-        code: '',
-        expiresIn: item.period,
-        period: item.period,
-        progress: 0,
-      }));
+      const list = Array.isArray(res) ? res : [];
+      const accounts = list.map((item) => {
+        const period = Number(item.period) || 30;
+        return {
+          id: item.id,
+          issuer: item.issuer,
+          label: item.label,
+          accountIdentifier: item.accountIdentifier,
+          remark: item.remark,
+          code: '',
+          expiresIn: period,
+          period,
+          progress: 0,
+        };
+      });
       this.setData({ accounts, loading: false });
       accounts.forEach((account) => this.fetchCode(account.id));
     } catch (error) {
@@ -135,8 +192,11 @@ Page({
       const res = await api.fetchAccountCode(accountId);
       const accounts = this.data.accounts.map((item) => {
         if (item.id !== accountId) return item;
-        const progress = Math.floor(((item.period - res.expiresIn) / item.period) * 100);
-        return { ...item, code: res.code, expiresIn: res.expiresIn, period: res.period, progress };
+        const total = Number(res.period) || Number(item.period) || 30;
+        const expiresIn = Number(res.expiresIn);
+        const safeExpires = Number.isFinite(expiresIn) && expiresIn >= 0 ? expiresIn : total;
+        const progress = total ? Math.floor(((total - safeExpires) / total) * 100) : 0;
+        return { ...item, code: res.code, expiresIn: safeExpires, period: total, progress };
       });
       this.setData({ accounts });
     } catch (error) {

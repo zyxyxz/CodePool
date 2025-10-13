@@ -18,6 +18,12 @@
   opacity: 0.8;
 }
 
+.hero .remark {
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
 .hero .code {
   margin-top: 24px;
   font-size: 40px;

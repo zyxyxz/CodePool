@@ -22,12 +22,16 @@
         <input placeholder="例如 GitHub" value="{{form.issuer}}" data-field="issuer" bindinput="handleInput" />
       </view>
       <view class="form-item">
-        <text class="label">账号标识</text>
-        <input placeholder="例如 admin@example.com" value="{{form.label}}" data-field="label" bindinput="handleInput" />
+        <text class="label">账号名称</text>
+        <input placeholder="例如 团队管理员" value="{{form.label}}" data-field="label" bindinput="handleInput" />
+      </view>
+      <view class="form-item">
+        <text class="label">登录名 / 标识 (可选)</text>
+        <input placeholder="例如 admin@example.com" value="{{form.accountIdentifier}}" data-field="accountIdentifier" bindinput="handleInput" />
       </view>
       <view class="form-item">
         <text class="label">备注 (可选)</text>
-        <input placeholder="可在此填写备注" value="{{form.accountIdentifier}}" data-field="accountIdentifier" bindinput="handleInput" />
+        <input placeholder="可在此填写备注" value="{{form.remark}}" data-field="remark" bindinput="handleInput" />
       </view>
       <view class="form-item">
         <text class="label">密钥</text>

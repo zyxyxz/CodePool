@@ -3,6 +3,11 @@
     <view class="card login-card">
       <view class="login-title">需要登录</view>
       <view class="login-desc">登录后即可同步团队验证码</view>
+      <view class="profile-preview">
+        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
+        <text class="nickname">{{loginProfile.nickname || 'TeamKey 用户'}}</text>
+        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
+      </view>
       <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
     </view>
   </block>
@@ -42,6 +47,8 @@
             <view>
               <view class="issuer">{{item.issuer}}</view>
               <view class="label">{{item.label}}</view>
+              <view class="identifier" wx:if="{{item.accountIdentifier}}">账号：{{item.accountIdentifier}}</view>
+              <view class="note" wx:if="{{item.remark}}">{{item.remark}}</view>
             </view>
             <view class="code">{{item.code || '-- ----'}}</view>
           </view>

@@ -1,4 +1,5 @@
-import { Card, Input, Table } from 'antd';
+import { Card, Input, Table, Tag } from 'antd';
+import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 import { adminApi } from '../api/client';
 
@@ -10,8 +11,18 @@ const TeamsPage: React.FC = () => {
   const fetchTeams = async (page = 1, pageSize = 20, search = keyword) => {
     setLoading(true);
     try {
-      const { data } = await adminApi.getTeams({ page, pageSize, keyword: search });
-      setData({ items: data.items, total: data.total, page: data.page, pageSize: data.pageSize });
+      const params: Record<string, any> = { page, page_size: pageSize };
+      const trimmed = search.trim();
+      if (trimmed) params.keyword = trimmed;
+      const { data } = await adminApi.getTeams(params);
+      const items = (data.items || []).map((item: any) => ({
+        ...item,
+        ownerNickname: item.owner_nickname,
+        ownerOpenId: item.owner_open_id,
+        memberCount: item.member_count ?? 0,
+        createdAt: item.created_at,
+      }));
+      setData({ items, total: data.total, page: data.page, pageSize: data.pageSize });
     } finally {
       setLoading(false);
     }
@@ -22,7 +33,21 @@ const TeamsPage: React.FC = () => {
   }, []);
 
   return (
-    <Card className="section" title="团队管理" extra={<Input.Search placeholder="搜索团队" allowClear onSearch={(value) => { setKeyword(value); fetchTeams(1, data.pageSize, value); }} /> }>
+    <Card
+      className="section"
+      title="团队管理"
+      extra={
+        <Input.Search
+          placeholder="搜索团队"
+          allowClear
+          onSearch={(value) => {
+            const trimmed = value.trim();
+            setKeyword(trimmed);
+            fetchTeams(1, data.pageSize, trimmed);
+          }}
+        />
+      }
+    >
       <Table
         loading={loading}
         dataSource={data.items}
@@ -34,10 +59,23 @@ const TeamsPage: React.FC = () => {
           onChange: (page, pageSize) => fetchTeams(page, pageSize),
         }}
         columns={[
-          { title: '团队ID', dataIndex: 'id' },
+          { title: '团队ID', dataIndex: 'id', width: 90 },
           { title: '名称', dataIndex: 'name' },
-          { title: '创建时间', dataIndex: 'createdAt' },
-          { title: '所有者', dataIndex: ['owner', 'nickname'], render: (_: any, record: any) => record.owner?.nickname || record.owner?.id },
+          {
+            title: '成员数',
+            dataIndex: 'memberCount',
+            render: (value: number) => <Tag color="blue">{value ?? 0}</Tag>,
+          },
+          {
+            title: '所有者',
+            dataIndex: 'ownerNickname',
+            render: (_: unknown, record: any) => record.ownerNickname || record.ownerOpenId || record.owner_id || '-',
+          },
+          {
+            title: '创建时间',
+            dataIndex: 'createdAt',
+            render: (value: string | null) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '-'),
+          },
           { title: '描述', dataIndex: 'description', render: (value: string) => value || '-' },
         ]}
       />

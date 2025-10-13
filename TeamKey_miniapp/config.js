@@ -1,5 +1,5 @@
 const CONFIG = {
-  BASE_URL: 'http://127.0.0.1:8000',
+  BASE_URL: 'https://jgyy67304094.vicp.fun',
 };
 
 module.exports = CONFIG;

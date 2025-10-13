@@ -71,6 +71,7 @@ def create_account(
         salt=enc.salt,
         created_by_id=current_user.id,
     )
+    account.remark = payload.remark
     db.add(account)
     db.commit()
     db.refresh(account)

@@ -29,10 +29,18 @@ Page({
     await this.fetchShares();
   },
 
+  onHide() {
+    this.clearTicker();
+  },
+
+  onUnload() {
+    this.clearTicker();
+  },
+
   async fetchAccount() {
     try {
       const account = await api.fetchAccountDetail(this.data.accountId);
-      this.setData({ account, loading: false, period: account.period });
+      this.setData({ account, loading: false, period: Number(account.period) || 30 });
       wx.setNavigationBarTitle({ title: account.issuer });
     } catch (error) {
       console.error(error);
@@ -43,10 +51,39 @@ Page({
   async fetchCode() {
     try {
       const res = await api.fetchAccountCode(this.data.accountId);
-      const progress = Math.floor(((res.period - res.expiresIn) / res.period) * 100);
-      this.setData({ code: res.code, expiresIn: res.expiresIn, period: res.period, progress });
+      const total = Number(res.period) || this.data.period || 30;
+      const expiresIn = Number(res.expiresIn);
+      const safeExpires = Number.isFinite(expiresIn) && expiresIn >= 0 ? expiresIn : total;
+      const progress = total ? Math.floor(((total - safeExpires) / total) * 100) : 0;
+      this.setData({ code: res.code, expiresIn: safeExpires, period: total, progress });
+      this.startTicker();
     } catch (error) {
       wx.showToast({ title: '获取验证码失败', icon: 'none' });
+    }
+  },
+
+  startTicker() {
+    this.clearTicker();
+    if (!this.data.code) return;
+    const ticker = setInterval(() => {
+      const total = Number(this.data.period) || 30;
+      const remaining = Number(this.data.expiresIn) - 1;
+      if (remaining <= 0) {
+        this.setData({ expiresIn: total, progress: 0 });
+        this.fetchCode();
+        return;
+      }
+      const safeRemaining = remaining < 0 ? 0 : remaining;
+      const progress = total ? Math.floor(((total - safeRemaining) / total) * 100) : 0;
+      this.setData({ expiresIn: safeRemaining, progress });
+    }, 1000);
+    this._ticker = ticker;
+  },
+
+  clearTicker() {
+    if (this._ticker) {
+      clearInterval(this._ticker);
+      this._ticker = null;
     }
   },
 
@@ -66,6 +103,36 @@ Page({
 
   async handleRefresh() {
     await this.fetchCode();
+  },
+
+  async handleEditRemark() {
+    const account = this.data.account || {};
+    if (!account) return;
+    const current = account.remark || '';
+    wx.showModal({
+      title: '修改备注',
+      editable: true,
+      placeholderText: '输入备注内容，可为空',
+      content: current,
+      cancelText: '清空',
+      success: async (res) => {
+        if (!res.confirm && !res.cancel) {
+          return;
+        }
+        const remark = res.confirm ? (res.content ?? '') : '';
+        try {
+          const updated = await api.updateAccount(
+            this.data.accountId,
+            { remark },
+            { preserveEmptyKeys: ['remark'] }
+          );
+          this.setData({ account: updated });
+          wx.showToast({ title: '备注已更新', icon: 'success' });
+        } catch (error) {
+          wx.showToast({ title: '更新失败', icon: 'none' });
+        }
+      },
+    });
   },
 
   async handleShare() {

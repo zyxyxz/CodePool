@@ -38,3 +38,18 @@ class Account(Base):
     permissions: Mapped[list["AccountPermission"]] = relationship(back_populates="account", cascade="all, delete-orphan")
     shares: Mapped[list["Share"]] = relationship(back_populates="account", cascade="all, delete-orphan")
     audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="account")
+
+    @property
+    def remark(self) -> str | None:
+        metadata = self.extra_metadata or {}
+        value = metadata.get("remark")
+        return value if value is not None else None
+
+    @remark.setter
+    def remark(self, value: str | None) -> None:
+        metadata = dict(self.extra_metadata or {})
+        if value and value.strip():
+            metadata["remark"] = value.strip()
+        else:
+            metadata.pop("remark", None)
+        self.extra_metadata = metadata or None

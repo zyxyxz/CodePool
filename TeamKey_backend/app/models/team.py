@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import String, Text, DateTime, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.team_invite import TeamInvite
 
 
 class Team(Base):
@@ -22,3 +26,4 @@ class Team(Base):
     memberships: Mapped[list["TeamMembership"]] = relationship(back_populates="team", cascade="all, delete-orphan")
     accounts: Mapped[list["Account"]] = relationship(back_populates="team")
     audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="team")
+    invites: Mapped[list["TeamInvite"]] = relationship("TeamInvite", back_populates="team", cascade="all, delete-orphan")

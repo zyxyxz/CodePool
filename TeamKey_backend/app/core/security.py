@@ -4,6 +4,17 @@ from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
+try:
+    import bcrypt  # type: ignore
+
+    if not hasattr(bcrypt, '__about__'):
+        class _About:
+            __version__ = getattr(bcrypt, '__version__', 'unknown')
+
+        bcrypt.__about__ = _About()  # type: ignore[attr-defined]
+except Exception:  # pragma: no cover
+    bcrypt = None
+
 from app.core.settings import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

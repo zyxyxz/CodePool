@@ -2,6 +2,7 @@
   <view class="card hero">
     <view class="issuer">{{account ? account.issuer : ''}}</view>
     <view class="label">{{account ? account.label : ''}}</view>
+    <view class="remark" wx:if="{{account && account.remark}}">{{account.remark}}</view>
     <view class="code">{{code}}</view>
     <view class="timer">
       <text>剩余 {{expiresIn}}s</text>
@@ -16,13 +17,15 @@
   <view class="card info">
     <view class="section">
       <text class="title">账号信息</text>
-      <view class="row"><text class="label">标识</text><text class="value">{{account && account.accountIdentifier ? account.accountIdentifier : '-'}}</text></view>
+      <view class="row"><text class="label">账号</text><text class="value">{{account && account.accountIdentifier ? account.accountIdentifier : '-'}}</text></view>
+      <view class="row"><text class="label">备注</text><text class="value">{{account && account.remark ? account.remark : '-'}}</text></view>
       <view class="row"><text class="label">周期</text><text class="value">{{account ? account.period : ''}} s</text></view>
       <view class="row"><text class="label">位数</text><text class="value">{{account ? account.digits : ''}}</text></view>
     </view>
     <view class="section">
       <text class="title">快捷操作</text>
       <view class="button-group">
+        <button class="button-outline" size="mini" bindtap="handleEditRemark">编辑备注</button>
         <button class="button-primary" size="mini" bindtap="handleShare">一次性分享</button>
         <button class="button-outline" size="mini" bindtap="handleDelete">删除账号</button>
       </view>

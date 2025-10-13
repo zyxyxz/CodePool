@@ -3,6 +3,11 @@
     <view class="card login-card">
       <view class="login-title">需要登录</view>
       <view class="login-desc">登录后查看审计日志</view>
+      <view class="profile-preview">
+        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
+        <text class="nickname">{{loginProfile.nickname || 'TeamKey 用户'}}</text>
+        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
+      </view>
       <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
     </view>
   </block>

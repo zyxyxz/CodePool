@@ -16,6 +16,7 @@ class AccountCreate(BaseModel):
     period: int | None = Field(default=30, ge=15, le=120)
     algorithm: TotpAlgorithm | None = TotpAlgorithm.SHA1
     account_identifier: str | None = None
+    remark: str | None = Field(default=None, max_length=200)
 
 
 class AccountUpdate(BaseModel):
@@ -25,6 +26,7 @@ class AccountUpdate(BaseModel):
     digits: int | None = Field(default=None, ge=6, le=8)
     period: int | None = Field(default=None, ge=15, le=120)
     algorithm: TotpAlgorithm | None = None
+    remark: str | None = Field(default=None, max_length=200)
 
 
 class AccountResponse(BaseModel):
@@ -33,6 +35,7 @@ class AccountResponse(BaseModel):
     issuer: str
     label: str
     account_identifier: str | None
+    remark: str | None = None
     digits: int
     period: int
     algorithm: TotpAlgorithm

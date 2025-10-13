@@ -1,4 +1,5 @@
-import { Card, Col, Row, Statistic, Table, Typography } from 'antd';
+import { Card, Col, Row, Statistic, Table, Tag, Typography } from 'antd';
+import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 import { adminApi } from '../api/client';
 
@@ -16,8 +17,28 @@ const DashboardPage: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
 
   useEffect(() => {
-    adminApi.getStats().then(({ data }) => setStats(data));
-    adminApi.getLogs({ pageSize: 5 }).then(({ data }) => setLogs(data.items || []));
+    adminApi.getStats().then(({ data }) =>
+      setStats({
+        userCount: data.user_count,
+        teamCount: data.team_count,
+        accountCount: data.account_count,
+        membershipCount: data.membership_count,
+      })
+    );
+    adminApi
+      .getLogs({ page_size: 5 })
+      .then(({ data }) =>
+        setLogs(
+          (data.items || []).map((item: any) => ({
+            ...item,
+            createdAt: item.created_at,
+            teamName: item.team_name ?? (item.team_id ? `#${item.team_id}` : '-'),
+            userNickname: item.user_nickname ?? item.user_open_id ?? item.user_id,
+            targetType: item.target_type,
+            targetId: item.target_id,
+          }))
+        )
+      );
   }, []);
 
   return (
@@ -54,15 +75,30 @@ const DashboardPage: React.FC = () => {
           pagination={false}
           rowKey="id"
           columns={[
-            { title: '时间', dataIndex: 'createdAt', key: 'createdAt' },
-            { title: '操作', dataIndex: 'action', key: 'action' },
+            {
+              title: '时间',
+              dataIndex: 'createdAt',
+              key: 'createdAt',
+              render: (value: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
+            },
+            {
+              title: '操作',
+              dataIndex: 'action',
+              key: 'action',
+              render: (value: string) => <Tag color="geekblue">{value}</Tag>,
+            },
             {
               title: '用户',
-              dataIndex: ['user', 'nickname'],
+              dataIndex: 'userNickname',
               key: 'user',
-              render: (_: any, record: any) => record.user?.nickname || record.user?.id || '系统',
+              render: (value: string | null) => value || '系统',
             },
-            { title: '目标', dataIndex: 'targetType', key: 'targetType', render: (_: any, record: any) => `${record.targetType || '--'} #${record.targetId ?? '-'}` },
+            {
+              title: '目标',
+              dataIndex: 'targetType',
+              key: 'targetType',
+              render: (_: unknown, record: any) => `${record.targetType || '--'} #${record.targetId ?? '-'}`,
+            },
           ]}
         />
       </Card>
