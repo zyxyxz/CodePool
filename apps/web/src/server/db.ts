@@ -202,7 +202,11 @@ function openDatabase() {
       fs.chmodSync(dataDirectory, 0o700);
     }
   }
-  const instance = new Database(env.databasePath);
+  // Configure SQLite's lock wait before any PRAGMA that may itself require a
+  // write lock. This matters when multiple Next.js build/runtime workers open
+  // a fresh database at the same time.
+  const instance = new Database(env.databasePath, { timeout: 30_000 });
+  instance.pragma("busy_timeout = 30000");
   fs.chmodSync(env.databasePath, 0o600);
   instance.pragma("journal_mode = WAL");
   for (const sidecar of [`${env.databasePath}-wal`, `${env.databasePath}-shm`]) {
@@ -211,7 +215,6 @@ function openDatabase() {
     }
   }
   instance.pragma("foreign_keys = ON");
-  instance.pragma("busy_timeout = 5000");
   instance.exec(
     `CREATE TABLE IF NOT EXISTS schema_migrations (
       version INTEGER PRIMARY KEY,
