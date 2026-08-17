@@ -9,7 +9,7 @@
 - 容器端口：`3000`
 - 数据卷：`/app/apps/web/data`
 - 数据库：`/app/apps/web/data/codepool.db`
-- 自动发布：GitHub push webhook → Dokploy 构建 → Docker 健康检查
+- 自动发布：push `main` → GitHub Actions 全量门禁 → Dokploy API 构建 → 生产健康检查
 
 镜像使用非 root 用户运行，并通过容器 `HEALTHCHECK` 每 30 秒检查应用和数据库连通性。
 
@@ -44,20 +44,24 @@ Dokploy 前还有 Cloudflare 等可信代理，则按真实链路调整 `CODEPOO
 
 ## 发布与回滚
 
-1. 变更通过 CI 的 lint、typecheck、小程序静态检查、Next.js 构建、安全烟测和 Docker 构建。
-2. 合并或推送到 `main` 后，GitHub webhook 通知 Dokploy。
-3. Dokploy 拉取提交、构建镜像并启动新容器。
-4. 容器健康检查通过后接管流量。
-5. 验证 `/api/health`、管理员登录和关键成员 API。
-6. 首次迁移前保留并验证加密备份；迁移执行后以向前修复方式处理故障。
+1. 合并或推送到 `main` 后，GitHub Actions 执行 lint、typecheck、小程序静态检查、Next.js
+   构建、安全烟测、依赖审计和 Docker 构建。
+2. 只有 `verify` 与 `container` 同时通过，`deploy` 作业才把该次已验证 SHA 推进专用
+   `production` 分支，再使用仓库密钥 `DOKPLOY_API_KEY` 调用 Dokploy API；Dokploy 自身的 push
+   自动部署保持关闭，避免坏提交抢先上线。
+3. Dokploy 只拉取 `production` 分支、构建镜像并启动新容器，CI 持续轮询部署终态。workflow
+   并发策略为排队而非取消，防止后续 push 中断已经开始的生产发布。
+4. 部署完成后，CI 验证 `/api/health` 返回服务正常且数据库 ready，才将生产环境标为成功。
+5. 首次迁移前保留并验证加密备份；迁移执行后以向前修复方式处理故障。
 
 v2/v3 的数据库结构是追加式迁移，但安全语义不兼容 v1 镜像：v1 不认识用户会话版本、团队
 停用和内容治理状态。一旦新版本迁移完成并执行过任何停用、注销或治理操作，禁止回滚到 v1
 镜像，否则旧会话可能重新获得访问。此后只能发布向前修复版本，或在维护窗口从迁移前的完整
 数据库备份和对应镜像成对恢复。
 
-当前 webhook 因 Dokploy 管理域名使用 Tailscale 私网 DNS，通过公网入口触发。正式长期运行
-建议提供一个仅允许 `/api/deploy/*` 的 HTTPS 公网入口，并轮换曾在会话中暴露的部署凭据。
+部署 API 使用 HTTPS 和 GitHub Actions 加密仓库密钥。Dokploy push webhook 可以保留连接但必须
+关闭 `autoDeploy`；生产部署只允许由通过质量门禁的 `deploy` 作业触发。应定期轮换部署凭据，
+并将 API 权限限制在该应用所需的最小范围。
 
 ## SQLite 备份
 

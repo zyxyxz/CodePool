@@ -10,7 +10,9 @@ permissions:
 
 concurrency:
   group: codepool-ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Runs include production promotion and deployment. Queue newer pushes so a
+  # later workflow can never cancel an already-started Dokploy release.
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -62,3 +64,30 @@ jobs:
           tags: codepool:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [verify, container]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    environment:
+      name: production
+      url: https://codepool.apps.aisp24.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Promote verified commit to immutable deployment branch
+        run: |
+          git push origin "${GITHUB_SHA}:refs/heads/production" --force
+          promoted_sha="$(git ls-remote origin refs/heads/production | cut -f1)"
+          test "$promoted_sha" = "$GITHUB_SHA"
+      - name: Deploy verified commit through Dokploy API
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_API_URL: https://dokploy.aisp24.com
+          DOKPLOY_APPLICATION_ID: IrlFKl84EpZWf2Lsdw57f
+          CODEPOOL_PRODUCTION_URL: https://codepool.apps.aisp24.com
+          DEPLOY_COMMIT_SHA: ${{ github.sha }}
+          DEPLOY_RUN_ID: ${{ github.run_id }}
+        run: node scripts/deploy-dokploy.mjs
