@@ -1,0 +1,14 @@
+<view class="page">
+  <view class="legal-header">
+    <text class="eyebrow">CODEPOOL LEGAL</text>
+    <text class="title">{{policy.title}}</text>
+    <text class="version">{{policy.version}}</text>
+  </view>
+  <view class="warning" wx:if="{{needsLegalConfig}}">本页仍缺少正式运营主体或客服邮箱。请在完成配置和法务审核后再提交正式版本。</view>
+  <block wx:for="{{policy.sections}}" wx:key="title">
+    <view class="card section">
+      <text class="section-title">{{item.title}}</text>
+      <text class="body" selectable="true">{{item.body}}</text>
+    </view>
+  </block>
+</view>

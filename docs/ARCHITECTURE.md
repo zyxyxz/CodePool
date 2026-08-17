@@ -1,53 +1,60 @@
-# 技术架构
-
-## 1. 总体结构
+# CodePool 技术架构
 
 ```mermaid
 flowchart LR
-  M["原生微信小程序"] -->|"HTTPS + Bearer JWT"| R["Next.js Route Handlers /api/v1"]
-  W["Next.js 官网与管理端"] -->|"Server Components / HttpOnly Cookie"| S["Next.js Server"]
-  R --> D["领域服务：鉴权 / 加密 / TOTP / 审计"]
-  S --> D
-  D --> Q["SQLite WAL"]
-  D --> X["微信 jscode2session"]
+  M["原生微信小程序"] -->|"HTTPS + Bearer JWT"| V["Next.js /api/v1"]
+  A["运营后台"] -->|"HttpOnly Cookie + CSRF 校验"| O["Next.js /api/admin"]
+  V --> D["鉴权 / RBAC / 配额 / 限流"]
+  O --> D
+  D --> C["AES-GCM / TOTP / 审计"]
+  C --> Q["SQLite WAL + 持久卷"]
+  V --> W["微信 jscode2session"]
+  Q --> B["一致性加密备份 → 异地存储"]
 ```
 
-`apps/web` 是唯一服务端进程。App Router 同时承载官网、管理端、版本化 API 和数据库访问，避免旧架构中 Python DTO、Vite 类型和小程序字段三方漂移。
+## 代码结构
 
-## 2. 数据设计
-
-- `users`：微信身份与状态。
-- `teams` / `team_members`：池边界和 RBAC。
-- `vault_items`：统一内容表。`kind` 区分内容类型，正文采用三个加密字段保存。
-- `share_links`：哈希令牌、有效期、最大领取次数。
-- `team_invites`：哈希邀请令牌、目标角色与有效期。
-- `audit_logs`：只保存动作和目标元数据，不保存内容正文、验证码或密钥。
-- `schema_migrations`：幂等数据库迁移版本。
-
-数据库启用 WAL、外键约束和 busy timeout。初始化由服务进程幂等执行，也可以提前运行 `npm run db:init`。
-
-## 3. API 边界
-
-业务接口统一放在 `/api/v1`，响应格式为：
-
-```json
-{ "code": 0, "data": {}, "msg": "" }
+```text
+apps/web/       Next.js 官网、运营后台、Route Handlers、SQLite 数据层
+apps/miniapp/   微信原生 WXML / WXSS / JavaScript
+docs/           产品、架构、安全、API 和上线文档
 ```
 
-小程序的 `utils/api.js` 在传给页面前解开响应信封，并集中兼容 camelCase。新代码不再继续扩散 snake_case。
+只有一个 Node.js 生产服务。管理页面通过客户端 API 获得加载、错误和实时操作反馈；所有数据
+规则仍在服务端执行，页面显隐不作为权限边界。
 
-## 4. 部署模型
+## 数据模型
 
-当前 SQLite 驱动要求持久磁盘和长生命周期 Node.js 进程，适合 VPS、Docker、PM2 或支持持久卷的平台。不要将当前配置直接部署到无状态 Serverless。
+- `users`：微信身份、账号状态与 `session_version`。
+- `teams` / `team_members`：团队边界、所有权、角色和成员到期。
+- `vault_items`：五类内容的统一元数据与 AES-GCM 密文字段。
+- `share_links` / `team_invites`：哈希令牌、次数、到期、领取和撤销状态。
+- `audit_logs`：不含正文的安全事件。
+- `platform_settings`：运营开关、配额和默认有效期。
+- `admin_login_attempts` / `api_rate_limits`：持久限流状态。
+- `account_deletion_requests`：用户注销工作流。
+- `schema_migrations`：按版本追加的生产迁移。
 
-当出现下列任一条件时迁移 PostgreSQL：
+数据库启用 WAL、外键约束和 busy timeout。生产库已经应用 v1；运营治理、限流和注销表位于
+追加的 v2，注销申请说明拆分位于追加的 v3。禁止修改历史 migration 假装完成升级。
 
-- Next.js 需要水平扩容为多个实例；
-- 写入并发持续超过单机 SQLite 的合理范围；
-- 需要托管备份、只读副本或跨区域容灾。
+## 并发与一致性
 
-迁移时保持 Route Handlers 和领域模型不变，把 `src/server/db.ts` 后面的查询抽到 repository 层并替换驱动。Redis 只在需要分布式限流和短期令牌高吞吐时引入，不作为当前架构的硬依赖。
+- 一次性分享使用带条件的 `UPDATE ... RETURNING`，领取次数在事务内原子递增。
+- 一次性邀请在事务内条件更新，避免并发重复接受。
+- 用户停用和注销通过会话版本使旧 JWT 失效。
+- 团队停用会撤销有效分享与邀请；有其他有效成员的活跃团队必须先转移所有权，独有个人团队
+  会在注销完成时自动停用归档。
+- 所有到期比较使用 SQLite `datetime()` 规范化 ISO 时间。
 
-## 5. 从旧版迁移
+## 扩容边界
 
-旧版 TeamKey 的 FastAPI 数据结构与新版统一内容模型不兼容，且旧密文依赖原 `SERVER_MASTER_KEY`。上线迁移必须在持有旧密钥的可信环境中执行“解密 → 新密钥重加密”，不能直接复制密文字段。仓库不包含业务数据库，因此本次重构没有自动迁移或触碰现有运行数据。
+当前模型适合持久磁盘上的单实例 Docker 服务。出现任一情况时应迁移 PostgreSQL：
+
+- 需要水平扩容多个 Next.js 实例；
+- 写入并发持续超过单机 SQLite 能力；
+- 需要托管 PITR、只读副本或跨区域容灾；
+- 限流和后台任务需要分布式一致性。
+
+迁移时将 SQL 查询抽到 repository 层，并把限流迁移到 Redis 或集中式网关；小程序与管理端
+API 契约不应改变。

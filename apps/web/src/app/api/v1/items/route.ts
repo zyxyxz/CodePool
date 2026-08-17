@@ -8,6 +8,8 @@ import { requireMember } from "@/server/auth";
 import { encrypt } from "@/server/crypto";
 import { db } from "@/server/db";
 import { itemSummary, type ItemRow } from "@/server/items";
+import { assertCanCreateItem } from "@/server/quota";
+import { enforceRateLimit } from "@/server/rate-limit";
 
 const createSchema = z.object({
   teamId: z.uuid(),
@@ -28,7 +30,11 @@ export async function GET(request: NextRequest) {
     const query = request.nextUrl.searchParams.get("q")?.trim();
     if (!teamId) return ok([]);
     requireTeamRole(userId, teamId);
-    const clauses = ["team_id = ?", "(expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)"];
+    const clauses = [
+      "team_id = ?",
+      "status = 'active'",
+      "(expires_at IS NULL OR datetime(expires_at) > CURRENT_TIMESTAMP)",
+    ];
     const values: unknown[] = [teamId];
     if (kind) {
       clauses.push("kind = ?");
@@ -51,7 +57,11 @@ export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireMember(request);
     const input = createSchema.parse(await jsonBody(request));
+    await requireMember(request);
     requireTeamRole(userId, input.teamId, ["owner", "admin", "member"]);
+    enforceRateLimit(request, { namespace: "item-create-user", subject: `user:${userId}`, limit: 120, windowSeconds: 3_600, errorCode: "ITEM_WRITE_RATE_LIMITED" });
+    enforceRateLimit(request, { namespace: "item-create-team", subject: `team:${input.teamId}`, limit: 600, windowSeconds: 3_600, errorCode: "ITEM_WRITE_RATE_LIMITED" });
+    assertCanCreateItem(input.teamId);
     const id = randomUUID();
     const encrypted = encrypt(input.content);
     db.prepare(

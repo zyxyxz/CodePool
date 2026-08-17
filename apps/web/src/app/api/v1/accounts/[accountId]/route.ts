@@ -6,6 +6,8 @@ import { ApiError, fail, jsonBody, ok } from "@/server/api";
 import { requireMember } from "@/server/auth";
 import { db } from "@/server/db";
 import { accountSummary, type ItemRow } from "@/server/items";
+import { writablePlatformSettings } from "@/server/quota";
+import { enforceRateLimit } from "@/server/rate-limit";
 
 type Context = { params: Promise<{ accountId: string }> };
 
@@ -25,8 +27,6 @@ export async function PATCH(request: NextRequest, context: Context) {
   try {
     const { userId } = await requireMember(request);
     const { accountId } = await context.params;
-    const row = getItemForUser(userId, accountId) as unknown as ItemRow;
-    requireTeamRole(userId, row.team_id, ["owner", "admin"]);
     const input = z.object({
       issuer: z.string().trim().min(1).max(120).optional(),
       label: z.string().trim().min(1).max(160).optional(),
@@ -34,6 +34,12 @@ export async function PATCH(request: NextRequest, context: Context) {
       account_identifier: z.string().trim().max(160).nullable().optional(),
       remark: z.string().trim().max(500).nullable().optional(),
     }).parse(await jsonBody(request));
+    await requireMember(request);
+    const row = getItemForUser(userId, accountId) as unknown as ItemRow;
+    requireTeamRole(userId, row.team_id, ["owner", "admin"]);
+    enforceRateLimit(request, { namespace: "item-update-user", subject: `user:${userId}`, limit: 240, windowSeconds: 3_600, errorCode: "ITEM_WRITE_RATE_LIMITED" });
+    enforceRateLimit(request, { namespace: "item-update-item", subject: `item:${accountId}`, limit: 120, windowSeconds: 3_600, errorCode: "ITEM_WRITE_RATE_LIMITED" });
+    writablePlatformSettings();
     const metadata = { ...(JSON.parse(row.metadata) as Record<string, unknown>) };
     if (input.issuer !== undefined) metadata.issuer = input.issuer;
     if (input.label !== undefined) metadata.label = input.label;

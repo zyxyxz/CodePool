@@ -1,33 +1,80 @@
 <view class="page">
   <view class="intro">
-    <text class="eyebrow">NEW POOL ITEM</text>
-    <text class="title">放入团队代码池</text>
-    <text class="desc">正文将加密保存，列表和管理端只展示元数据。</text>
+    <text class="eyebrow">{{editing ? 'EDIT SECURE ITEM' : 'NEW SECURE ITEM'}}</text>
+    <text class="title">{{editing ? '编辑共享内容' : '放入团队代码池'}}</text>
+    <text class="desc">正文会在服务端加密保存，团队列表与管理后台只展示必要元数据。</text>
   </view>
 
-  <view class="card form-card">
-    <view class="field">
-      <text>内容类型</text>
-      <picker range="{{kinds}}" range-key="label" value="{{kindIndex}}" bindchange="handleKindChange">
-        <view class="picker">{{kinds[kindIndex].label}} <text>⌄</text></view>
-      </picker>
-    </view>
-    <view class="field">
-      <text>团队池</text>
-      <picker range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
-        <view class="picker">{{teams[teamIndex] ? teams[teamIndex].name : '请选择'}} <text>⌄</text></view>
-      </picker>
-    </view>
-    <view class="field"><text>标题</text><input placeholder="例如：生产环境发布脚本" data-field="title" value="{{form.title}}" bindinput="handleInput" maxlength="120" /></view>
-    <view class="field"><text>标识（可选）</text><input placeholder="项目、环境或账号" data-field="identifier" value="{{form.identifier}}" bindinput="handleInput" maxlength="160" /></view>
-    <view class="field" wx:if="{{kinds[kindIndex].value === 'snippet'}}"><text>代码语言（可选）</text><input placeholder="shell / sql / javascript" data-field="language" value="{{form.language}}" bindinput="handleInput" maxlength="40" /></view>
-    <view class="field">
-      <text>自动过期</text>
-      <picker range="{{expirations}}" range-key="label" value="{{expirationIndex}}" bindchange="handleExpirationChange">
-        <view class="picker">{{expirations[expirationIndex].label}} <text>⌄</text></view>
-      </picker>
-    </view>
-    <view class="field"><text>内容</text><textarea placeholder="粘贴代码、验证码或说明…" data-field="content" value="{{form.content}}" bindinput="handleInput" maxlength="200000" auto-height /></view>
+  <view class="card state-card" wx:if="{{loading}}">
+    <text class="state-symbol">···</text>
+    <text class="state-title">正在准备安全表单</text>
   </view>
-  <button class="submit" loading="{{submitting}}" bindtap="handleSubmit">安全保存</button>
+
+  <view class="card state-card" wx:elif="{{error}}">
+    <text class="state-symbol">!</text>
+    <text class="state-title">无法打开表单</text>
+    <text class="state-desc">{{error}}</text>
+    <button class="button-secondary" bindtap="handleRetry">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <view class="card form-card">
+      <view class="field">
+        <text class="field-label">内容类型</text>
+        <picker disabled="{{editing}}" range="{{kinds}}" range-key="label" value="{{kindIndex}}" bindchange="handleKindChange">
+          <view class="picker-value {{editing ? 'disabled' : ''}}"><text>{{kinds[kindIndex].label}}</text><text>{{editing ? '不可修改' : '选择 ›'}}</text></view>
+        </picker>
+        <text class="field-help">{{kinds[kindIndex].help}}</text>
+      </view>
+
+      <view class="field">
+        <text class="field-label">所属团队</text>
+        <picker disabled="{{editing}}" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
+          <view class="picker-value {{editing ? 'disabled' : ''}}"><text>{{teams[teamIndex] ? teams[teamIndex].name : '请选择团队'}}</text><text>{{editing ? '不可修改' : '选择 ›'}}</text></view>
+        </picker>
+      </view>
+
+      <view class="field">
+        <text class="field-label">标题 *</text>
+        <input class="input" maxlength="120" placeholder="例如：生产环境发布脚本" data-field="title" value="{{form.title}}" bindinput="handleInput" />
+      </view>
+
+      <view class="field">
+        <text class="field-label">标识（可选）</text>
+        <input class="input" maxlength="160" placeholder="项目、环境或账号，便于搜索" data-field="identifier" value="{{form.identifier}}" bindinput="handleInput" />
+      </view>
+
+      <view class="field" wx:if="{{kinds[kindIndex].value === 'snippet'}}">
+        <text class="field-label">代码语言（可选）</text>
+        <input class="input" maxlength="40" placeholder="shell / sql / javascript" data-field="language" value="{{form.language}}" bindinput="handleInput" />
+      </view>
+
+      <view class="field">
+        <text class="field-label">自动过期</text>
+        <picker range="{{expirations}}" range-key="label" value="{{expirationIndex}}" bindchange="handleExpirationChange">
+          <view class="picker-value"><text>{{expirations[expirationIndex].label}}</text><text>选择 ›</text></view>
+        </picker>
+        <text class="field-help">到期后内容会从成员列表中自动隐藏。</text>
+      </view>
+
+      <view class="field content-field">
+        <view class="field-heading">
+          <text class="field-label">内容 *</text>
+          <button class="paste-button" bindtap="handlePaste">粘贴</button>
+        </view>
+        <input wx:if="{{kinds[kindIndex].value === 'secret' && maskContent}}" class="input secret-content-input" password maxlength="200000" placeholder="输入或粘贴敏感内容…" data-field="content" value="{{form.content}}" bindinput="handleInput" />
+        <textarea wx:else class="textarea content-input" maxlength="200000" placeholder="粘贴代码、口令或团队说明…" data-field="content" value="{{form.content}}" bindinput="handleInput" />
+        <view class="content-foot">
+          <view class="mask-switch" wx:if="{{kinds[kindIndex].value === 'secret'}}">
+            <switch color="#15803D" checked="{{maskContent}}" bindchange="handleMaskChange" />
+            <text>输入时遮挡</text>
+          </view>
+          <text class="counter">{{contentLength}} / 200000</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="safe-note">安全提示：请确认接收成员范围。敏感正文的查看、编辑和分享都会记录在团队审计日志中。</view>
+    <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{editing ? '保存修改' : '加密并保存'}}</button>
+  </block>
 </view>

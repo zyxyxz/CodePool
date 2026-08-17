@@ -1,49 +1,48 @@
 <view class="page">
-  <block wx:if="{{needsLogin}}">
-    <view class="card login-card">
-      <view class="login-title">需要登录</view>
-      <view class="login-desc">登录后查看审计日志</view>
-      <view class="profile-preview">
-        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
-        <text class="nickname">{{loginProfile.nickname || 'CodePool 用户'}}</text>
-        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
-      </view>
-      <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
-    </view>
-  </block>
+  <view class="offline-bar" wx:if="{{offline}}">当前处于离线状态</view>
 
-  <block wx:if="{{!needsLogin}}">
-    <view class="card">
-      <view class="flex-between">
-        <view>
-          <text class="title">操作日志</text>
-          <text class="subtitle">透明记录团队内敏感操作</text>
-        </view>
-      </view>
-      <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
-        <view class="picker-value">{{teams[teamIndex] ? teams[teamIndex].name : '全部团队'}}</view>
-      </picker>
+  <view class="card state-card" wx:if="{{needsLogin}}">
+    <text class="state-symbol">◎</text>
+    <text class="state-title">登录后查看安全审计</text>
+    <text class="state-desc">审计记录帮助团队追溯敏感内容的创建、查看、修改和分享。</text>
+    <button class="button-primary" bindtap="goLogin">前往登录</button>
+  </view>
+
+  <block wx:else>
+    <view class="audit-header">
+      <text class="eyebrow">SECURITY AUDIT</text>
+      <text class="page-title">团队安全审计</text>
+      <text class="page-desc">记录必要操作元数据，不记录代码池正文或 TOTP 密钥。</text>
     </view>
 
-    <block wx:if="{{loading}}">
-      <view class="card">加载中...</view>
-    </block>
+    <picker wx:if="{{teams.length}}" mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
+      <view class="team-picker"><view><text>当前团队</text><text>{{currentTeam.name}}</text></view><text>切换 ›</text></view>
+    </picker>
 
-    <block wx:if="{{!loading && logs.length === 0}}">
-      <view class="card empty">暂无操作日志</view>
-    </block>
+    <scroll-view class="filter-scroll" scroll-x enable-flex wx:if="{{teams.length}}">
+      <view class="filter-row">
+        <block wx:for="{{filters}}" wx:key="value"><button class="filter-chip {{activeFilter === item.value ? 'active' : ''}}" data-filter="{{item.value}}" bindtap="handleFilter">{{item.label}}</button></block>
+      </view>
+    </scroll-view>
 
-    <view class="timeline" wx:if="{{logs.length}}">
-      <block wx:for="{{logs}}" wx:key="id">
-        <view class="timeline-item">
-          <view class="dot"></view>
-          <view class="content">
-            <view class="action">{{item.action}}</view>
-            <view class="meta">{{item.createdAt}} · 用户 {{item.user && item.user.nickname ? item.user.nickname : (item.user ? item.user.id : '系统')}}</view>
-            <view class="meta">目标：{{item.targetType}} #{{item.targetId || '-'}}</view>
+    <view class="card state-card" wx:if="{{loading}}"><text class="state-symbol">···</text><text class="state-title">正在加载审计记录</text></view>
+    <view class="card state-card" wx:elif="{{error}}"><text class="state-symbol">!</text><text class="state-title">审计日志加载失败</text><text class="state-desc">{{error}}</text><button class="button-secondary" bindtap="handleRetry">重新加载</button></view>
+    <view class="card state-card" wx:elif="{{!teams.length}}"><text class="state-symbol">∅</text><text class="state-title">暂无团队</text><text class="state-desc">创建或加入团队后，这里会显示安全操作记录。</text></view>
+    <view class="card state-card" wx:elif="{{!visibleLogs.length}}"><text class="state-symbol">✓</text><text class="state-title">暂无此类记录</text><text class="state-desc">当前筛选范围内没有安全事件。</text></view>
+
+    <view class="timeline" wx:else>
+      <block wx:for="{{visibleLogs}}" wx:key="id">
+        <view class="timeline-row">
+          <view class="timeline-line"><view class="dot {{item.category}}"></view></view>
+          <view class="card log-card">
+            <view class="log-top"><text class="action">{{item.actionLabel}}</text><text class="relative">{{item.relativeText}}</text></view>
+            <view class="actor-row"><image src="{{item.actorAvatar}}" mode="aspectFill" /><text>{{item.actorName}}</text><text>操作 {{item.targetText}}</text></view>
+            <view class="log-meta"><text>{{item.createdText}}</text><text wx:if="{{item.targetId}}">对象编号 {{item.targetId}}</text></view>
           </view>
         </view>
       </block>
     </view>
+
+    <view class="safe-note" wx:if="{{visibleLogs.length}}">安全审计用于团队内部风控与问题追溯。请勿将成员标识和操作记录转发到无关群聊。</view>
   </block>
 </view>

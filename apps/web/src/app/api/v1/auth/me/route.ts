@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
         `SELECT t.id AS teamId, t.name, t.slug, t.owner_id AS ownerId, tm.role,
          tm.expires_at AS expiresAt, t.created_at AS createdAt
          FROM teams t JOIN team_members tm ON tm.team_id = t.id
-         WHERE tm.user_id = ? ORDER BY t.updated_at DESC`,
+         WHERE tm.user_id = ? AND t.status = 'active'
+         AND (tm.expires_at IS NULL OR datetime(tm.expires_at) > CURRENT_TIMESTAMP)
+         ORDER BY t.updated_at DESC`,
       )
       .all(session.userId);
     return ok({ user, teams });

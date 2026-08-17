@@ -1,56 +1,107 @@
 <view class="page">
-  <block wx:if="{{needsLogin}}">
-    <view class="card login-card">
-      <view class="login-title">需要登录</view>
-      <view class="login-desc">登录后管理团队成员</view>
-      <view class="profile-preview">
-        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
-        <text class="nickname">{{loginProfile.nickname || 'CodePool 用户'}}</text>
-        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
-      </view>
-      <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
-    </view>
-  </block>
+  <view class="offline-bar" wx:if="{{offline}}">当前处于离线状态</view>
+
+  <view class="card login-card" wx:if="{{needsLogin}}">
+    <text class="login-title">登录后管理团队</text>
+    <text class="login-desc">登录只用于验证团队身份和记录必要的安全操作。</text>
+    <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar">
+      <image class="login-avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
+      <text>更换头像</text>
+    </button>
+    <input class="input nickname-input" type="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" bindinput="handleNicknameInput" />
+    <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="#15803D" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
+    <button class="button-primary" loading="{{loginLoading}}" disabled="{{loginLoading || !legalConsent}}" bindtap="handleLogin">微信快捷登录</button>
+  </view>
 
   <block wx:if="{{!needsLogin}}">
-    <view class="card">
-      <view class="flex-between">
-        <view>
-          <text class="title">我的团队</text>
-          <text class="subtitle">切换团队查看成员</text>
-        </view>
-        <button class="button-primary" size="mini" bindtap="handleCreateTeam">新建</button>
+    <view class="team-header">
+      <view>
+        <text class="eyebrow">TEAM WORKSPACE</text>
+        <text class="page-title">团队与权限</text>
+        <text class="page-desc">按最小权限原则管理成员和邀请。</text>
       </view>
-
-      <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
-        <view class="picker-value">{{teams[teamIndex] ? teams[teamIndex].name : '暂无团队'}}</view>
-      </picker>
+      <button class="create-button" bindtap="handleCreateTeam">＋ 新建</button>
     </view>
 
-    <view class="card">
-      <view class="flex-between">
-        <text class="title">成员列表</text>
-        <view class="actions">
-          <button class="button-outline" size="mini" bindtap="handleInvite">邀请</button>
-          <button class="button-outline" size="mini" open-type="share" wx:if="{{shareInviteToken}}">转发</button>
-        </view>
-      </view>
-      <view class="invite-tip" wx:if="{{shareInviteToken}}">
-        分享邀请有效期至 {{shareInviteExpiresText}}
-      </view>
-      <block wx:if="{{members.length === 0}}">
-        <view class="empty">暂无成员</view>
-      </block>
-      <block wx:for="{{members}}" wx:key="id">
-        <view class="member" data-userid="{{item.id}}" bindlongpress="handleMemberActions">
-          <image class="avatar" src="{{item.avatarUrl ? item.avatarUrl : '/assets/avatar-default.png'}}" />
-          <view class="info">
-            <text class="name">{{item.nickname ? item.nickname : '匿名成员'}}</text>
-            <text class="role">角色：{{item.role}}</text>
+    <view class="card state-card" wx:if="{{loading}}">
+      <text class="state-symbol">···</text>
+      <text class="state-title">正在同步团队</text>
+    </view>
+
+    <view class="card state-card" wx:elif="{{error}}">
+      <text class="state-symbol">!</text>
+      <text class="state-title">团队加载失败</text>
+      <text class="state-desc">{{error}}</text>
+      <button class="button-secondary" bindtap="handleRetry">重新加载</button>
+    </view>
+
+    <view class="card state-card" wx:elif="{{!teams.length}}">
+      <text class="state-symbol">+</text>
+      <text class="state-title">还没有团队</text>
+      <text class="state-desc">创建一个团队代码池，开始安全协作。</text>
+      <button class="button-primary" bindtap="handleCreateTeam">创建第一个团队</button>
+      <button class="button-ghost accept-empty" bindtap="handleAcceptInvite">使用邀请码加入</button>
+    </view>
+
+    <block wx:else>
+      <view class="workspace-card">
+        <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
+          <view class="workspace-picker">
+            <view>
+              <text class="workspace-name">{{currentTeam.name}}</text>
+              <text class="workspace-meta">{{currentRoleLabel}} · {{currentTeam.memberCount}} 位成员 · {{currentTeam.itemCount}} 项内容</text>
+            </view>
+            <text>切换 ›</text>
           </view>
-          <text class="meta">加入于 {{item.joinedAt}}</text>
+        </picker>
+        <view class="workspace-actions">
+          <button class="button-secondary" wx:if="{{canManage}}" loading="{{inviteCreating}}" bindtap="handleInvite">邀请成员</button>
+          <button class="button-ghost" bindtap="handleAcceptInvite">输入邀请码</button>
+        </view>
+      </view>
+
+      <view class="card invite-ready" wx:if="{{inviteToken}}">
+        <view>
+          <text class="invite-title">{{inviteRoleLabel}}邀请已就绪</text>
+          <text class="invite-desc">有效至 {{inviteExpiresText}}，邀请码只能使用一次。</text>
+        </view>
+        <view class="invite-actions">
+          <button class="button-primary button-small" open-type="share">微信转发</button>
+          <button class="button-ghost button-small" bindtap="handleCopyInvite">复制邀请码</button>
+        </view>
+      </view>
+
+      <view class="section-head"><text>团队成员</text><text>{{members.length}} 人</text></view>
+      <view class="card member-list">
+        <view class="empty-list" wx:if="{{!members.length}}">暂无成员数据</view>
+        <block wx:for="{{members}}" wx:key="userId">
+          <view class="member-row">
+            <image class="avatar" src="{{item.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
+            <view class="member-info">
+              <view class="member-name-row"><text class="member-name">{{item.nickname || '未命名成员'}}</text><text class="self" wx:if="{{item.isSelf}}">我</text></view>
+              <text class="member-meta">{{item.roleLabel}} · {{item.joinedText}} 加入</text>
+              <text class="member-expiry" wx:if="{{item.expiresText}}">权限至 {{item.expiresText}}</text>
+            </view>
+            <button class="manage-button" wx:if="{{item.manageable}}" data-userid="{{item.userId}}" bindtap="handleMemberAction">管理</button>
+            <text class="locked" wx:else>{{item.role === 'owner' ? '所有者' : ''}}</text>
+          </view>
+        </block>
+      </view>
+
+      <block wx:if="{{canManage}}">
+        <view class="section-head"><text>最近邀请</text><text>{{invites.length}} 条</text></view>
+        <view class="card invite-list">
+          <view class="empty-list" wx:if="{{!invites.length}}">还没有创建邀请</view>
+          <block wx:for="{{invites}}" wx:key="id">
+            <view class="invite-row">
+              <view><text class="invite-role">{{item.roleLabel}}</text><text class="invite-time">有效至 {{item.expiresText}}</text></view>
+              <text class="invite-status {{item.active ? 'active' : ''}}">{{item.statusText}}</text>
+            </view>
+          </block>
         </view>
       </block>
-    </view>
+
+      <view class="safe-note">所有者不可被移除或降级；管理员可管理内容和普通成员；成员可创建内容；访客仅可查看。权限变更会立即生效并写入审计。</view>
+    </block>
   </block>
 </view>

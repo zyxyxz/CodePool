@@ -1,78 +1,209 @@
-.page {
-  padding: 16px;
+.offline-bar {
+  margin: -28rpx -28rpx 20rpx;
+  padding: 16rpx;
+  background: #fff4dc;
+  color: #7a4d00;
+  text-align: center;
+  font-size: 23rpx;
 }
 
-.hero {
+.totp-card {
+  padding: 34rpx;
+  border-radius: 32rpx;
+  background: #101820;
+  color: #ffffff;
+  box-shadow: 0 18rpx 48rpx rgba(16, 24, 32, 0.18);
+}
+
+.service-row,
+.code-actions,
+.share-actions {
+  display: flex;
+  align-items: center;
+}
+
+.service-row {
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.service,
+.label,
+.code,
+.code-hint,
+.share-title,
+.share-desc,
+.share-status,
+.share-time {
+  display: block;
+}
+
+.service {
+  font-size: 36rpx;
+  font-weight: 730;
+}
+
+.label {
+  margin-top: 8rpx;
+  color: #aeb9b2;
+  font-size: 24rpx;
+}
+
+.security-badge {
+  padding: 8rpx 14rpx;
+  border-radius: 10rpx;
+  background: #25352c;
+  color: #7ce79d;
+  font-size: 20rpx;
+  font-weight: 750;
+}
+
+.code-wrap {
+  margin: 62rpx 0 34rpx;
   text-align: center;
-  background: linear-gradient(135deg, #2979ff, #00bfa5);
+}
+
+.code {
+  color: #7c8a82;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 64rpx;
+  font-weight: 800;
+  letter-spacing: 10rpx;
+}
+
+.code.visible {
+  color: #7ce79d;
+}
+
+.code-hint {
+  margin-top: 18rpx;
+  color: #9eaaa3;
+  font-size: 22rpx;
+}
+
+.code-actions {
+  margin-top: 28rpx;
+  gap: 14rpx;
+}
+
+.reveal-button,
+.copy-button {
+  flex: 1;
+  border-radius: 18rpx;
+}
+
+.reveal-button {
+  background: #2a3a31;
+  color: #8ff0ab;
+}
+
+.copy-button {
+  background: #15803d;
   color: #ffffff;
 }
 
-.hero .issuer {
-  font-size: 20px;
-  font-weight: 600;
+.info-card {
+  margin-top: 22rpx;
 }
 
-.hero .label {
-  margin-top: 4px;
-  opacity: 0.8;
-}
-
-.hero .remark {
-  margin-top: 4px;
-  font-size: 14px;
-  opacity: 0.7;
-}
-
-.hero .code {
-  margin-top: 24px;
-  font-size: 40px;
-  letter-spacing: 4px;
-  font-weight: 700;
-}
-
-.timer {
-  margin-top: 12px;
-}
-
-.actions {
-  margin-top: 16px;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
-.info .section {
-  margin-bottom: 16px;
-}
-
-.info .title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1f2933;
-}
-
-.row {
+.info-row {
+  padding: 20rpx 0;
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
-  color: #4b5563;
+  gap: 28rpx;
+  border-top: 1rpx solid #edf1ee;
+  color: #718078;
+  font-size: 24rpx;
 }
 
-.button-group {
-  display: flex;
-  gap: 12px;
-  margin-top: 12px;
+.info-row text:last-child {
+  max-width: 68%;
+  color: #26342c;
+  text-align: right;
+  word-break: break-all;
 }
 
-.shares .share-row {
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+}
+
+.share-ready {
+  margin-top: 22rpx;
+  border-color: #b7ddc1;
+  background: #f0f9f2;
+}
+
+.share-title {
+  font-size: 29rpx;
+  font-weight: 680;
+}
+
+.share-desc {
+  margin-top: 8rpx;
+  color: #5f6f65;
+  font-size: 22rpx;
+}
+
+.share-actions {
+  margin-top: 20rpx;
+  gap: 12rpx;
+}
+
+.shares-card {
+  margin-top: 22rpx;
+}
+
+.section-title {
+  margin-bottom: 0;
+}
+
+.small {
+  font-size: 22rpx;
+}
+
+.empty-shares {
+  padding: 22rpx 0 8rpx;
+  color: #89958e;
+  font-size: 24rpx;
+  text-align: center;
+}
+
+.share-row {
+  padding: 22rpx 0;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
-  color: #4b5563;
+  gap: 16rpx;
+  border-top: 1rpx solid #edf1ee;
 }
 
-.shares .share-row:last-child {
-  border-bottom: none;
+.share-status {
+  color: #718078;
+  font-size: 24rpx;
+  font-weight: 650;
+}
+
+.share-status.active {
+  color: #15803d;
+}
+
+.share-time,
+.share-views {
+  margin-top: 5rpx;
+  color: #89958e;
+  font-size: 21rpx;
+}
+
+.share-side { display: flex; align-items: center; gap: 12rpx; }
+.revoke-share { min-height: 60rpx; padding: 10rpx 16rpx; border-radius: 14rpx; background: #fff1f0; color: #b42318; font-size: 21rpx; }
+
+.delete-button {
+  width: 100%;
+  margin-top: 12rpx;
+}
+
+.safe-note {
+  margin-top: 22rpx;
 }

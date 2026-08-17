@@ -1,128 +1,137 @@
 const api = require('../../utils/api');
+const {
+  ACTION_LABELS,
+  KIND_LABELS,
+  formatDate,
+  formatRelative,
+  friendlyError,
+} = require('../../utils/format');
+
 const app = getApp();
+
+const FILTERS = [
+  { value: 'all', label: '全部' },
+  { value: 'content', label: '内容' },
+  { value: 'share', label: '分享' },
+  { value: 'member', label: '成员' },
+  { value: 'auth', label: '登录' },
+];
+
+function actionCategory(action) {
+  if (action.indexOf('SHARE_') === 0) return 'share';
+  if (action.indexOf('MEMBER_') === 0 || action.indexOf('INVITE_') === 0 || action.indexOf('TEAM_') === 0) return 'member';
+  if (action.indexOf('AUTH_') === 0) return 'auth';
+  return 'content';
+}
 
 Page({
   data: {
-    logs: [],
+    loading: true,
+    error: '',
+    offline: false,
+    needsLogin: false,
     teams: [],
     teamIndex: 0,
-    loading: true,
-    needsLogin: false,
-    loginLoading: false,
-    loginProfile: app.getStoredProfile ? app.getStoredProfile() : {
-      nickname: 'CodePool 用户',
-      avatarUrl: '/assets/avatar-default.png',
-    },
+    currentTeam: null,
+    filters: FILTERS,
+    activeFilter: 'all',
+    logs: [],
+    visibleLogs: [],
   },
 
   async onShow() {
     await this.initialize();
   },
 
-  async initialize() {
-    const hasSession = app.globalData.token ? true : await app.tryRestoreSession();
-    if (!hasSession && !app.globalData.token) {
-      const profile = this.prepareLoginProfile();
-      this.setData({ needsLogin: true, loading: false, logs: [], loginProfile: profile });
+  async onPullDownRefresh() {
+    try {
+      await this.initialize({ silent: true });
+    } finally {
+      wx.stopPullDownRefresh();
+    }
+  },
+
+  async initialize(options = {}) {
+    const hasSession = await app.awaitReady();
+    if (!hasSession) {
+      this.setData({ loading: false, needsLogin: true, logs: [], visibleLogs: [], error: '' });
       return;
     }
     this.setData({ needsLogin: false });
-    let teams = [];
-    if (app.globalData.token) {
-      try {
-        teams = await api.fetchTeams();
-        app.globalData.teams = teams;
-      } catch (error) {
-        console.error('fetch teams failed', error);
-        teams = app.globalData.teams || [];
-      }
-    }
-    const activeTeamId = app.globalData.activeTeamId || (teams[0] ? teams[0].teamId : null);
-    const teamIndex = Math.max(0, teams.findIndex((t) => t.teamId === activeTeamId));
-    if (teams[teamIndex]) {
-      app.setActiveTeam(teams[teamIndex].teamId);
-    }
-    this.setData({ teams, teamIndex: teamIndex === -1 ? 0 : teamIndex });
-    await this.loadLogs();
-  },
-
-  async handleLogin() {
-    if (this.data.loginLoading) return;
-    this.setData({ loginLoading: true });
+    if (!options.silent) this.setData({ loading: true, error: '' });
     try {
-      app.setStoredProfile(this.data.loginProfile);
-      await app.ensureLogin(true);
-      this.setData({ needsLogin: false });
-      await this.initialize();
+      const teams = await api.fetchTeams();
+      let teamIndex = teams.findIndex((team) => team.teamId === app.globalData.activeTeamId);
+      if (teamIndex < 0) teamIndex = 0;
+      const currentTeam = teams[teamIndex] || null;
+      if (currentTeam) app.setActiveTeam(currentTeam.teamId);
+      this.setData({ teams, teamIndex, currentTeam });
+      await this.loadLogs();
     } catch (error) {
-      wx.showToast({ title: '登录失败', icon: 'none' });
-      console.error(error);
-    } finally {
-      this.setData({ loginLoading: false });
+      if (error.code === 'UNAUTHORIZED') {
+        app.logout();
+        this.setData({ loading: false, needsLogin: true });
+        return;
+      }
+      this.setData({ loading: false, error: friendlyError(error, '审计日志加载失败'), offline: Boolean(error.offline) });
     }
   },
 
   async loadLogs() {
-    const team = this.data.teams[this.data.teamIndex];
-    this.setData({ loading: true });
-    try {
-      const res = await api.fetchLogs(team ? team.teamId : undefined);
-      const items = (Array.isArray(res) ? res : res.items || []).map((item) => ({
-        id: item.id,
-        action: item.action,
-        createdAt: item.created_at || item.createdAt,
-        targetType: item.target_type || item.targetType,
-        targetId: item.target_id || item.targetId,
-        user: item.user || (item.actorName ? { nickname: item.actorName, avatar_url: item.actorAvatar } : null),
-      }));
-      this.setData({ logs: items, loading: false });
-    } catch (error) {
-      wx.showToast({ title: '加载失败', icon: 'none' });
-      this.setData({ loading: false });
+    const team = this.data.currentTeam;
+    if (!team) {
+      this.setData({ loading: false, logs: [], visibleLogs: [] });
+      return;
     }
+    this.setData({ loading: true, error: '' });
+    try {
+      const rows = await api.fetchLogs(team.teamId, 200);
+      const logs = rows.map((log) => {
+        const action = log.action || 'UNKNOWN';
+        const targetType = log.targetType || log.target_type || '';
+        const actorName = log.actorName || (log.user && log.user.nickname) || '系统';
+        return {
+          ...log,
+          action,
+          actionLabel: ACTION_LABELS[action] || action,
+          category: actionCategory(action),
+          actorName,
+          actorAvatar: log.actorAvatar || '/assets/avatar-default.png',
+          createdText: formatDate(log.createdAt || log.created_at, true),
+          relativeText: formatRelative(log.createdAt || log.created_at),
+          targetText: KIND_LABELS[targetType] || (targetType === 'user' ? '成员' : targetType === 'team' ? '团队' : targetType === 'invite' ? '邀请' : '系统对象'),
+        };
+      });
+      this.setData({ logs, loading: false, error: '', offline: false }, () => this.applyFilter());
+    } catch (error) {
+      this.setData({ loading: false, error: friendlyError(error, '日志读取失败'), offline: Boolean(error.offline) });
+    }
+  },
+
+  applyFilter() {
+    const active = this.data.activeFilter;
+    this.setData({ visibleLogs: active === 'all' ? this.data.logs : this.data.logs.filter((log) => log.category === active) });
+  },
+
+  handleFilter(e) {
+    const filter = e.currentTarget.dataset.filter;
+    this.setData({ activeFilter: filter }, () => this.applyFilter());
   },
 
   handleTeamChange(e) {
     const teamIndex = Number(e.detail.value);
-    this.setData({ teamIndex }, () => {
-      const team = this.data.teams[teamIndex];
-      if (team) app.setActiveTeam(team.teamId);
+    const currentTeam = this.data.teams[teamIndex] || null;
+    this.setData({ teamIndex, currentTeam, activeFilter: 'all' }, () => {
+      if (currentTeam) app.setActiveTeam(currentTeam.teamId);
       this.loadLogs();
     });
   },
 
-  onPullDownRefresh() {
-    this.initialize().finally(() => wx.stopPullDownRefresh());
+  goLogin() {
+    wx.switchTab({ url: '/pages/home/index' });
   },
 
-  prepareLoginProfile() {
-    if (typeof app.getStoredProfile === 'function') {
-      const profile = app.getStoredProfile();
-      this.setData({ loginProfile: profile });
-      return profile;
-    }
-    const fallback = { nickname: 'CodePool 用户', avatarUrl: '/assets/avatar-default.png' };
-    this.setData({ loginProfile: fallback });
-    return fallback;
-  },
-
-  async handleChooseProfile() {
-    try {
-      const res = await wx.getUserProfile({ desc: '用于完善账号资料' });
-      const profile = app.setStoredProfile({
-        nickname: res.userInfo.nickName,
-        avatarUrl: res.userInfo.avatarUrl,
-        avatar_url: res.userInfo.avatarUrl,
-      });
-      this.setData({ loginProfile: profile });
-      wx.showToast({ title: '已更新头像昵称', icon: 'none' });
-    } catch (error) {
-      if (error && error.errMsg && error.errMsg.indexOf('cancel') !== -1) {
-        wx.showToast({ title: '已取消授权', icon: 'none' });
-      } else {
-        wx.showToast({ title: '获取信息失败', icon: 'none' });
-        console.error('profile choose failed', error);
-      }
-    }
+  handleRetry() {
+    this.initialize();
   },
 });

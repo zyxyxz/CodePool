@@ -1,6 +1,6 @@
 {
   "name": "@codepool/web",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,11 +8,16 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:init": "tsx scripts/init-db.ts"
+    "db:init": "tsx scripts/init-db.ts",
+    "db:backup": "node scripts/backup-db.mjs",
+    "db:verify-backup": "node scripts/verify-backup.mjs",
+    "db:restore": "node scripts/restore-db.mjs",
+    "smoke:security": "node scripts/security-smoke.mjs"
   },
   "dependencies": {
     "better-sqlite3": "13.0.3",
     "jose": "6.2.9",
+    "lucide-react": "^0.468.0",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",

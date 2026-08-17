@@ -1,16 +1,41 @@
 <view class="page">
-  <block wx:if="{{loading}}">
-    <view class="card">领取中...</view>
-  </block>
-  <block wx:elif="{{error}}">
-    <view class="card error">{{error}}</view>
-  </block>
-  <block wx:else>
-    <view class="card">
-      <view class="title">CodePool 分享</view>
-      <view class="code">{{payload.code || payload.secret}}</view>
-      <view class="meta">位数：{{payload.digits || '--'}} 周期：{{payload.period || '--'}}s</view>
-      <button class="button-primary" bindtap="handleCopy">复制</button>
+  <view class="share-header">
+    <view class="brand-mark">CP</view>
+    <text class="eyebrow">SECURE SHARE</text>
+    <text class="page-title">CodePool 安全分享</text>
+    <text class="page-desc">预览不会消耗领取次数，只有确认领取后才会解密正文。</text>
+  </view>
+
+  <view class="card state-card" wx:if="{{loading}}"><text class="state-symbol">···</text><text class="state-title">正在验证分享</text><text class="state-desc">此步骤不会领取或解密内容。</text></view>
+
+  <view class="card state-card error-card" wx:elif="{{error && !claimed}}"><text class="state-symbol">!</text><text class="state-title">无法使用此分享</text><text class="state-desc">{{error}}</text><button class="button-secondary" bindtap="handleRetry">重新检查</button><button class="button-ghost home-button" bindtap="goHome">返回 CodePool</button></view>
+
+  <block wx:elif="{{preview && !claimed}}">
+    <view class="preview-card">
+      <view class="preview-top"><text class="kind">{{preview.kindLabel}}</text><text class="views">剩余 {{preview.remainingViews}} 次</text></view>
+      <text class="title">{{preview.title || '安全内容'}}</text>
+      <text class="identifier" wx:if="{{preview.identifier}}">{{preview.identifier}}</text>
+      <view class="preview-meta"><text wx:if="{{preview.language}}">{{preview.language}}</text><text>有效至 {{preview.shareExpiresText}}</text></view>
+      <view class="locked-content"><text>内容尚未解密</text><text>确认领取后才能查看</text></view>
     </view>
+    <view class="safe-note">领取会消耗一次分享额度。请先确认发送者身份、标题和有效期；对来源不明的口令不要领取。</view>
+    <button class="button-primary claim-button" loading="{{claiming}}" disabled="{{claiming}}" bindtap="handleClaim">确认并领取</button>
+  </block>
+
+  <block wx:elif="{{claimed && payload}}">
+    <view class="success-banner"><text>领取成功</text><text>此内容不会再次通过同一领取次数展示</text></view>
+    <view class="result-card">
+      <view class="preview-top"><text class="kind">{{payload.kindLabel}}</text><text class="views">已安全领取</text></view>
+      <text class="title">{{payload.title || preview.title}}</text>
+      <text class="identifier" wx:if="{{payload.identifier}}">{{payload.identifier}}</text>
+      <view class="content-box {{contentVisible ? 'visible' : ''}}">
+        <text selectable="{{contentVisible}}">{{displayContent}}</text>
+      </view>
+      <progress wx:if="{{payload.kind === 'totp'}}" percent="{{codeProgress}}" stroke-width="4" activeColor="#15803D" backgroundColor="#DDE8E0" />
+      <text class="totp-warning" wx:if="{{payload.kind === 'totp'}}">{{codeExpiresIn > 0 ? codeExpiresIn + ' 秒后失效' : '动态码已失效，分享无法再次领取'}}</text>
+      <view class="result-actions"><button class="button-secondary" bindtap="handleToggleContent">{{contentVisible ? '立即隐藏' : '显示内容'}}</button><button class="button-primary" bindtap="handleCopy">复制</button></view>
+    </view>
+    <view class="safe-note">敏感内容会在 60 秒后或切换后台时自动遮挡。请勿截图、录屏或转发正文。</view>
+    <button class="button-ghost home-button" bindtap="goHome">进入 CodePool</button>
   </block>
 </view>

@@ -1,7 +1,46 @@
 page {
-  background-color: #f9fafb;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  color: #1f2933;
+  min-height: 100%;
+  background: #f4f7f5;
+  color: #17231d;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 28rpx;
+}
+
+view,
+text,
+input,
+textarea,
+button {
+  box-sizing: border-box;
+}
+
+button {
+  margin: 0;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  line-height: 1.25;
+}
+
+button::after {
+  border: 0;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 28rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.card {
+  background: #ffffff;
+  border: 1rpx solid #e3ebe6;
+  border-radius: 28rpx;
+  padding: 28rpx;
+  box-shadow: 0 12rpx 36rpx rgba(18, 54, 34, 0.06);
+  margin-bottom: 20rpx;
 }
 
 .flex {
@@ -12,50 +51,137 @@ page {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.primary-text {
-  color: #2979ff;
+  gap: 20rpx;
 }
 
 .section-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 16px 0 8px;
+  display: block;
+  color: #17231d;
+  font-size: 30rpx;
+  font-weight: 650;
+  margin-bottom: 20rpx;
 }
 
-.card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 8px 24px rgba(41, 121, 255, 0.08);
-  margin-bottom: 12px;
+.muted {
+  color: #718078;
 }
 
 .tag {
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
-  border-radius: 12px;
-  background: rgba(41, 121, 255, 0.08);
-  color: #2979ff;
-  font-size: 12px;
-  margin-right: 6px;
+  min-height: 44rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: #edf7f0;
+  color: #166534;
+  font-size: 22rpx;
+}
+
+.button-primary,
+.button-secondary,
+.button-danger,
+.button-ghost {
+  min-height: 88rpx;
+  border-radius: 20rpx;
+  padding: 20rpx 28rpx;
+  font-weight: 650;
 }
 
 .button-primary {
-  background: linear-gradient(135deg, #2979ff, #00bfa5);
   color: #ffffff;
-  border-radius: 24px;
-  padding: 12px 16px;
-  text-align: center;
+  background: #15803d;
+}
+
+.button-primary[disabled] {
+  color: rgba(255, 255, 255, 0.75);
+  background: #78a887;
+}
+
+.button-secondary {
+  color: #166534;
+  background: #edf7f0;
+}
+
+.button-ghost {
+  color: #405047;
+  background: #f3f6f4;
+}
+
+.button-danger {
+  color: #b42318;
+  background: #fff1f0;
+}
+
+.button-small {
+  min-height: 72rpx;
+  padding: 14rpx 22rpx;
+  border-radius: 18rpx;
+  font-size: 24rpx;
+}
+
+.field {
+  margin-bottom: 28rpx;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 12rpx;
+  color: #405047;
+  font-size: 25rpx;
   font-weight: 600;
 }
 
-.button-outline {
-  border: 1px solid #2979ff;
-  color: #2979ff;
-  border-radius: 24px;
-  padding: 10px 16px;
+.input,
+.textarea,
+.picker-value {
+  width: 100%;
+  min-height: 88rpx;
+  padding: 22rpx 24rpx;
+  border: 1rpx solid #dbe5df;
+  border-radius: 20rpx;
+  background: #f8faf9;
+  color: #17231d;
+}
+
+.textarea {
+  min-height: 280rpx;
+  line-height: 1.6;
+}
+
+.state-card {
+  padding: 64rpx 36rpx;
   text-align: center;
+}
+
+.state-symbol {
+  display: block;
+  margin-bottom: 20rpx;
+  color: #15803d;
+  font-size: 56rpx;
+  font-weight: 700;
+}
+
+.state-title {
+  display: block;
+  color: #17231d;
+  font-size: 32rpx;
+  font-weight: 650;
+}
+
+.state-desc {
+  display: block;
+  margin: 14rpx auto 28rpx;
+  max-width: 520rpx;
+  color: #718078;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.safe-note {
+  padding: 20rpx 24rpx;
+  border-radius: 18rpx;
+  background: #f0f7f2;
+  color: #526158;
+  font-size: 23rpx;
+  line-height: 1.6;
 }

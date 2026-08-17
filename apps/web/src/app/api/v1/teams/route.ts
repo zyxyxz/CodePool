@@ -5,6 +5,7 @@ import { audit } from "@/server/audit";
 import { created, fail, jsonBody, ok } from "@/server/api";
 import { requireMember } from "@/server/auth";
 import { db } from "@/server/db";
+import { assertCanCreateTeam } from "@/server/quota";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,10 +14,14 @@ export async function GET(request: NextRequest) {
       .prepare(
         `SELECT t.id AS teamId, t.name, t.slug, t.owner_id AS ownerId, tm.role,
          t.created_at AS createdAt,
-         (SELECT COUNT(*) FROM team_members x WHERE x.team_id = t.id) AS memberCount,
+         (SELECT COUNT(*) FROM team_members x JOIN users member_u ON member_u.id = x.user_id
+          WHERE x.team_id = t.id AND member_u.status = 'active'
+          AND (x.expires_at IS NULL OR datetime(x.expires_at) > CURRENT_TIMESTAMP)) AS memberCount,
          (SELECT COUNT(*) FROM vault_items v WHERE v.team_id = t.id) AS itemCount
          FROM teams t JOIN team_members tm ON tm.team_id = t.id
-         WHERE tm.user_id = ? ORDER BY t.updated_at DESC`,
+         WHERE tm.user_id = ? AND t.status = 'active'
+         AND (tm.expires_at IS NULL OR datetime(tm.expires_at) > CURRENT_TIMESTAMP)
+         ORDER BY t.updated_at DESC`,
       )
       .all(userId);
     return ok(teams);
@@ -27,11 +32,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await requireMember(request);
+    await requireMember(request);
     const input = z.object({ name: z.string().trim().min(2).max(48) }).parse(await jsonBody(request));
+    const session = await requireMember(request);
+    const userId = session.userId;
     const teamId = randomUUID();
     const slug = `${input.name.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-").slice(0, 24) || "pool"}-${teamId.slice(0, 6)}`;
-    db.transaction(() => {
+    const operation = db.transaction(() => {
+      const activeSession = db
+        .prepare("SELECT 1 FROM users WHERE id = ? AND status = 'active' AND session_version = ?")
+        .get(userId, session.sessionVersion);
+      if (!activeSession) throw new Error("UNAUTHORIZED");
+      assertCanCreateTeam(userId);
       db.prepare("INSERT INTO teams (id, name, slug, owner_id) VALUES (?, ?, ?, ?)").run(
         teamId,
         input.name,
@@ -42,7 +54,8 @@ export async function POST(request: NextRequest) {
         teamId,
         userId,
       );
-    })();
+    });
+    operation.immediate();
     audit({ request, teamId, actorId: userId, action: "TEAM_CREATE", targetType: "team", targetId: teamId });
     return created({ teamId, name: input.name, slug, ownerId: userId, role: "owner" });
   } catch (error) {

@@ -1,16 +1,78 @@
 <view class="page">
-  <view class="loading" wx:if="{{loading}}">安全读取中…</view>
-  <block wx:if="{{!loading && item}}">
+  <view class="offline-bar" wx:if="{{offline}}">当前网络不可用</view>
+
+  <view class="card state-card" wx:if="{{loading}}">
+    <text class="state-symbol">···</text>
+    <text class="state-title">安全读取中</text>
+    <text class="state-desc">正在校验团队权限并解密内容。</text>
+  </view>
+
+  <view class="card state-card" wx:elif="{{error}}">
+    <text class="state-symbol">!</text>
+    <text class="state-title">无法查看内容</text>
+    <text class="state-desc">{{error}}</text>
+    <button class="button-secondary" bindtap="handleRetry">重新加载</button>
+  </view>
+
+  <block wx:elif="{{item}}">
     <view class="meta-card">
-      <text class="kind">{{item.kind === 'snippet' ? 'CODE SNIPPET' : item.kind === 'code' ? 'ONE-TIME CODE' : item.kind === 'secret' ? 'SECRET' : 'NOTE'}}</text>
+      <view class="meta-top">
+        <text class="kind {{item.kind}}">{{item.kindLabel}}</text>
+        <text class="expiry {{item.expired ? 'expired' : ''}}">{{item.expiresAt ? '有效至 ' + item.expiresText : '长期有效'}}</text>
+      </view>
       <text class="title">{{item.title}}</text>
-      <view class="meta"><text wx:if="{{item.identifier}}">{{item.identifier}}</text><text wx:if="{{item.language}}">{{item.language}}</text><text wx:if="{{item.expiresAt}}">限时内容</text></view>
+      <text class="identifier" wx:if="{{item.identifier}}">{{item.identifier}}</text>
+      <view class="meta-list">
+        <text wx:if="{{item.language}}">语言：{{item.language}}</text>
+        <text>更新：{{item.updatedText}}</text>
+      </view>
     </view>
-    <view class="content-card">
-      <text selectable="true">{{item.content}}</text>
+
+    <view class="content-card {{contentVisible ? 'visible' : 'masked'}}">
+      <view class="content-head">
+        <text>加密正文</text>
+        <text>{{contentVisible ? '60 秒后自动隐藏' : '默认遮挡'}}</text>
+      </view>
+      <text class="content-text" selectable="{{contentVisible}}">{{displayContent}}</text>
+      <button class="reveal-button" bindtap="handleToggleContent">{{contentVisible ? '立即隐藏' : '显示内容'}}</button>
     </view>
-    <view class="actions"><button bindtap="handleCopy">复制内容</button><button bindtap="handleShare">临时分享</button></view>
-    <button class="delete" bindtap="handleDelete">移出代码池</button>
-    <view class="security">每次读取和分享都会写入安全审计，但不会记录正文。</view>
+
+    <view class="action-grid">
+      <button class="button-primary" bindtap="handleCopy">复制正文</button>
+      <button class="button-secondary" wx:if="{{item.canEdit}}" bindtap="handleEdit">编辑内容</button>
+      <button class="button-secondary" wx:if="{{item.canEdit}}" bindtap="handleDuplicate">复制为新条目</button>
+      <button class="button-secondary" wx:if="{{item.canShare}}" loading="{{sharing}}" bindtap="handleCreateShare">创建安全分享</button>
+    </view>
+
+    <view class="card share-ready" wx:if="{{shareToken}}">
+      <view>
+        <text class="share-title">分享已就绪</text>
+        <text class="share-desc">有效期至 {{shareExpiresText}}，正文不会显示在转发卡片上。</text>
+      </view>
+      <view class="share-actions">
+        <button class="button-primary button-small" open-type="share">微信转发</button>
+        <button class="button-ghost button-small" bindtap="handleCopyShareToken">复制口令</button>
+      </view>
+    </view>
+
+    <view class="card shares-card">
+      <view class="flex-between">
+        <text class="section-title">最近分享</text>
+        <text class="muted small">{{sharesLoading ? '同步中' : shares.length + ' 条'}}</text>
+      </view>
+      <view class="empty-shares" wx:if="{{!sharesLoading && !shares.length}}">还没有创建过分享</view>
+      <block wx:for="{{shares}}" wx:key="id">
+        <view class="share-row">
+          <view>
+            <text class="share-status {{item.active ? 'active' : ''}}">{{item.statusText}}</text>
+            <text class="share-time">有效至 {{item.expiresText}}</text>
+          </view>
+          <view class="share-side"><text class="share-views">领取 {{item.viewsText}}</text><button wx:if="{{item.active && item.canRevoke}}" class="revoke-share" data-id="{{item.id}}" bindtap="handleRevokeShare">撤销</button></view>
+        </view>
+      </block>
+    </view>
+
+    <button class="button-danger delete-button" wx:if="{{item.canDelete}}" bindtap="handleDelete">永久删除内容</button>
+    <view class="safe-note">每次查看、编辑、复制分享和领取都会产生必要的团队安全审计；审计记录不包含正文。</view>
   </block>
 </view>

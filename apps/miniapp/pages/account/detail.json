@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "账号详情"
+  "navigationBarTitleText": "动态验证码",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

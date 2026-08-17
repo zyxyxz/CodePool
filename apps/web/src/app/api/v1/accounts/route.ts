@@ -8,6 +8,8 @@ import { requireMember } from "@/server/auth";
 import { encrypt } from "@/server/crypto";
 import { db } from "@/server/db";
 import { accountSummary, type ItemRow } from "@/server/items";
+import { assertCanCreateItem } from "@/server/quota";
+import { enforceRateLimit } from "@/server/rate-limit";
 import { parseOtpAuth } from "@/server/totp";
 
 const schema = z.object({
@@ -36,10 +38,15 @@ export async function GET(request: NextRequest) {
     const rows = query
       ? db.prepare(
           `SELECT * FROM vault_items WHERE team_id = ? AND kind = 'totp'
+           AND status = 'active'
+           AND (expires_at IS NULL OR datetime(expires_at) > CURRENT_TIMESTAMP)
            AND (title LIKE ? OR identifier LIKE ?) ORDER BY updated_at DESC`,
         ).all(teamId, `%${query}%`, `%${query}%`)
       : db.prepare(
-          "SELECT * FROM vault_items WHERE team_id = ? AND kind = 'totp' ORDER BY updated_at DESC",
+          `SELECT * FROM vault_items WHERE team_id = ? AND kind = 'totp'
+           AND status = 'active'
+           AND (expires_at IS NULL OR datetime(expires_at) > CURRENT_TIMESTAMP)
+           ORDER BY updated_at DESC`,
         ).all(teamId);
     return ok((rows as ItemRow[]).map(accountSummary));
   } catch (error) {
@@ -51,9 +58,13 @@ export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireMember(request);
     const input = schema.parse(await jsonBody(request));
+    await requireMember(request);
     const teamId = input.teamId || input.team_id;
     if (!teamId) throw new z.ZodError([]);
     requireTeamRole(userId, teamId, ["owner", "admin"]);
+    enforceRateLimit(request, { namespace: "item-create-user", subject: `user:${userId}`, limit: 120, windowSeconds: 3_600, errorCode: "ITEM_WRITE_RATE_LIMITED" });
+    enforceRateLimit(request, { namespace: "item-create-team", subject: `team:${teamId}`, limit: 600, windowSeconds: 3_600, errorCode: "ITEM_WRITE_RATE_LIMITED" });
+    assertCanCreateItem(teamId);
     const otpUrl = input.otpauthUrl || input.otpauth_url;
     const parsed = otpUrl
       ? parseOtpAuth(otpUrl)

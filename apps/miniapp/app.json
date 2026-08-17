@@ -4,27 +4,30 @@
     "pages/team/index",
     "pages/logs/index",
     "pages/profile/index",
-    "pages/account/add",
-    "pages/account/detail",
     "pages/item/add/index",
     "pages/item/detail/index",
-    "pages/share/receive"
+    "pages/account/add/index",
+    "pages/account/detail",
+    "pages/share/receive",
+    "pages/legal/index"
   ],
   "window": {
     "navigationStyle": "default",
     "navigationBarBackgroundColor": "#101820",
     "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "CodePool"
+    "navigationBarTitleText": "CodePool",
+    "backgroundColor": "#F4F7F5",
+    "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "color": "#7A7E83",
-    "selectedColor": "#16A34A",
+    "color": "#66736B",
+    "selectedColor": "#15803D",
     "backgroundColor": "#FFFFFF",
-    "borderStyle": "black",
+    "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/home/index",
-        "text": "首页",
+        "text": "代码池",
         "iconPath": "assets/icons/home.png",
         "selectedIconPath": "assets/icons/home-active.png"
       },
@@ -36,7 +39,7 @@
       },
       {
         "pagePath": "pages/logs/index",
-        "text": "日志",
+        "text": "审计",
         "iconPath": "assets/icons/logs.png",
         "selectedIconPath": "assets/icons/logs-active.png"
       },
@@ -48,5 +51,10 @@
       }
     ]
   },
+  "networkTimeout": {
+    "request": 15000
+  },
+  "__usePrivacyCheck__": true,
+  "lazyCodeLoading": "requiredComponents",
   "sitemapLocation": "sitemap.json"
 }

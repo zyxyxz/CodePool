@@ -1,40 +1,59 @@
 <view class="page">
-  <block wx:if="{{needsLogin}}">
-    <view class="card login-card">
-      <view class="login-title">未登录</view>
-      <view class="login-desc">登录后可查看个人与团队信息</view>
-      <view class="profile-preview">
-        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
-        <text class="nickname">{{loginProfile.nickname || 'CodePool 用户'}}</text>
-        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
+  <view class="profile-header">
+    <text class="eyebrow">ACCOUNT & PRIVACY</text>
+    <text class="page-title">我的 CodePool</text>
+    <text class="page-desc">管理个人资料、安全偏好与本地登录状态。</text>
+  </view>
+
+  <view class="card state-card" wx:if="{{loading}}"><text class="state-symbol">···</text><text class="state-title">正在读取账号</text></view>
+
+  <view class="card login-card" wx:elif="{{needsLogin}}">
+    <text class="login-title">登录后同步团队</text>
+    <text class="login-desc">无需提供手机号；微信身份仅用于识别成员和保障安全审计。</text>
+    <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar"><image src="{{profile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" /><text>更换头像</text></button>
+    <input class="input nickname-input" type="nickname" maxlength="64" value="{{profile.nickname}}" placeholder="你的昵称" bindinput="handleNicknameInput" />
+    <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="#15803D" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
+    <button class="button-primary" loading="{{loginLoading}}" disabled="{{loginLoading || !legalConsent}}" bindtap="handleLogin">微信快捷登录</button>
+  </view>
+
+  <block wx:else>
+    <view class="account-card">
+      <button class="avatar-button signed" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar"><image src="{{profile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" /><text>更换头像</text></button>
+      <view class="account-info">
+        <input class="nickname-edit" type="nickname" maxlength="64" value="{{profile.nickname}}" bindinput="handleNicknameInput" />
+        <text class="user-id" bindtap="handleCopyUserId">成员编号 {{userIdMasked}} · 点击复制</text>
+        <text class="joined">{{joinedText}} 加入 · {{teams.length}} 个团队</text>
       </view>
-      <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
+      <button class="save-profile" loading="{{saving}}" bindtap="handleSaveProfile">保存</button>
     </view>
-  </block>
 
-  <block wx:if="{{!needsLogin}}">
-    <view class="card profile">
-      <image class="avatar" src="{{user && user.avatarUrl ? user.avatarUrl : '/assets/avatar-default.png'}}" />
-      <text class="name">{{user && user.nickname ? user.nickname : '未命名用户'}}</text>
-      <text class="openid" bindtap="handleCopyOpenId">OpenID：{{user ? user.openId : ''}}</text>
-      <view class="profile-actions">
-        <button class="button-outline" size="mini" loading="{{loginLoading}}" bindtap="handleUpdateProfile">更新微信头像昵称</button>
-        <button class="button-outline" size="mini" loading="{{loginLoading}}" bindtap="handleRelogin">刷新登录状态</button>
+    <view class="section-label">安全与隐私</view>
+    <view class="card menu-card">
+      <view class="menu-row">
+        <view><text class="menu-title">敏感信息安全遮挡</text><text class="menu-desc">动态码与密文默认隐藏，切后台立即清除</text></view>
+        <text class="secure-on">始终开启</text>
       </view>
+      <view class="menu-row tap" bindtap="goPrivacy"><view><text class="menu-title">隐私政策</text><text class="menu-desc">查看信息处理范围与用户权利</text></view><text class="arrow">›</text></view>
+      <view class="menu-row tap" bindtap="goTerms"><view><text class="menu-title">用户协议</text><text class="menu-desc">查看服务边界与使用规则</text></view><text class="arrow">›</text></view>
     </view>
 
-    <view class="card" wx:if="{{teams.length}}">
-      <text class="section-title">我的团队 ({{teams.length}})</text>
-      <block wx:for="{{teams}}" wx:key="teamId">
-        <view class="team-row">
-          <text class="name">{{item.name}}</text>
-          <text class="role">角色：{{item.role}}</text>
-        </view>
-      </block>
+    <view class="section-label">团队与应用</view>
+    <view class="card menu-card">
+      <view class="menu-row tap" bindtap="goTeam"><view><text class="menu-title">我的团队</text><text class="menu-desc">{{teams.length}} 个团队代码池</text></view><text class="arrow">›</text></view>
+      <view class="menu-row tap" bindtap="handleClearCache"><view><text class="menu-title">清理本地缓存</text><text class="menu-desc">清除草稿和本地调试配置</text></view><text class="arrow">›</text></view>
+      <view class="menu-row"><view><text class="menu-title">应用版本</text><text class="menu-desc">API {{apiBaseUrl}}</text></view><text class="version">{{version}}</text></view>
     </view>
 
-    <view class="card danger">
-      <button class="button-outline danger-btn" bindtap="handleLogout">退出登录</button>
+    <view class="section-label">账号操作</view>
+    <view class="card danger-card">
+      <button class="button-ghost" bindtap="handleLogout">退出登录</button>
+      <view class="deletion-status">
+        <view><text class="menu-title">账号注销状态</text><text class="menu-desc">{{deletionRequest ? deletionRequestedText + ' 提交' : '尚未提交注销申请'}}</text></view>
+        <text class="status-badge">{{deletionLoading ? '同步中' : deletionStatusLabel}}</text>
+      </view>
+      <button class="button-danger" loading="{{deletionLoading}}" bindtap="handleCancellation">{{canWithdrawDeletion ? '撤回注销申请' : canRequestDeletion ? '申请注销服务端账号' : '查看注销处理状态'}}</button>
+      <button class="button-ghost" bindtap="handleClearLocalLogin">仅清除本地登录</button>
+      <text class="danger-note">注销申请会提交到服务端审核；清除本地登录只影响本机。运营主体、客服渠道和承诺处理时限仍需在正式上线前配置。</text>
     </view>
   </block>
 </view>

@@ -38,7 +38,7 @@ export default function Home() {
         <div><span className="kicker">ONE TYPESCRIPT STACK</span><h2>更少的边界，<br />更可靠的交付。</h2><p>页面、管理端和 API Route Handlers 统一在 Next.js；微信小程序保持原生，直接消费版本化 API。</p></div>
         <div className="architecture-map"><div><small>CLIENT</small><b>微信原生小程序</b></div><i>HTTPS / JWT</i><div className="active"><small>FULL STACK</small><b>Next.js App Router</b><span>Web · Admin · API</span></div><i>encrypted at rest</i><div><small>DATA</small><b>SQLite → PostgreSQL</b></div></div>
       </section>
-      <footer className="shell"><div className="brand"><span className="brand-mark">C</span><span>CodePool</span></div><p>代码需要流动，秘密需要边界。</p></footer>
+      <footer className="shell"><div className="brand"><span className="brand-mark">C</span><span>CodePool</span></div><p>代码需要流动，秘密需要边界。</p><nav><Link href="/privacy">隐私政策</Link><Link href="/terms">用户协议</Link></nav></footer>
     </main>
   );
 }

@@ -1,59 +1,90 @@
 <view class="page">
-  <block wx:if="{{needsLogin}}">
-    <view class="card login-card">
-      <view class="login-title">未登录</view>
-      <view class="login-desc">登录后可添加团队账号</view>
-      <button class="button-primary" bindtap="handleGoLogin">返回登录</button>
-    </view>
-  </block>
+  <view class="intro">
+    <text class="eyebrow">{{editing ? 'EDIT TOTP' : 'SECURE TOTP'}}</text>
+    <text class="title">{{editing ? '编辑动态验证码' : '添加动态验证码'}}</text>
+    <text class="desc">密钥加密保存，仅在生成验证码时于服务端短暂解密，不会回传给客户端。</text>
+  </view>
 
-  <block wx:if="{{!needsLogin}}">
-    <view class="card">
-      <view class="section-title">选择团队</view>
-      <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
-        <view class="picker-value">{{teams[teamIndex] ? teams[teamIndex].name : '暂无团队'}}</view>
-      </picker>
-    </view>
+  <view class="card state-card" wx:if="{{loading}}">
+    <text class="state-symbol">···</text>
+    <text class="state-title">正在准备安全表单</text>
+  </view>
 
-    <view class="card">
-      <view class="section-title">手动添加</view>
-      <view class="form-item">
-        <text class="label">服务名称</text>
-        <input placeholder="例如 GitHub" value="{{form.issuer}}" data-field="issuer" bindinput="handleInput" />
+  <view class="card state-card" wx:elif="{{error}}">
+    <text class="state-symbol">!</text>
+    <text class="state-title">无法打开表单</text>
+    <text class="state-desc">{{error}}</text>
+    <button class="button-secondary" bindtap="handleRetry">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <button class="scan-button" wx:if="{{!editing}}" bindtap="handleScan">
+      <text class="scan-mark">▦</text>
+      <view><text class="scan-title">扫描 TOTP 二维码</text><text class="scan-desc">支持标准 otpauth:// 格式</text></view>
+      <text class="scan-arrow">›</text>
+    </button>
+
+    <view class="card form-card">
+      <view class="field">
+        <text class="field-label">所属团队</text>
+        <picker disabled="{{editing}}" mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
+          <view class="picker-value {{editing ? 'disabled' : ''}}"><text>{{teams[teamIndex] ? teams[teamIndex].name : '请选择团队'}}</text><text>{{editing ? '不可修改' : '选择 ›'}}</text></view>
+        </picker>
       </view>
-      <view class="form-item">
-        <text class="label">账号名称</text>
-        <input placeholder="例如 团队管理员" value="{{form.label}}" data-field="label" bindinput="handleInput" />
+
+      <view class="field">
+        <text class="field-label">服务名称 *</text>
+        <input class="input" maxlength="120" placeholder="例如 GitHub、AWS" data-field="issuer" value="{{form.issuer}}" bindinput="handleInput" />
       </view>
-      <view class="form-item">
-        <text class="label">登录名 / 标识 (可选)</text>
-        <input placeholder="例如 admin@example.com" value="{{form.accountIdentifier}}" data-field="accountIdentifier" bindinput="handleInput" />
+
+      <view class="field">
+        <text class="field-label">账号标签 *</text>
+        <input class="input" maxlength="160" placeholder="例如 生产管理员" data-field="label" value="{{form.label}}" bindinput="handleInput" />
       </view>
-      <view class="form-item">
-        <text class="label">备注 (可选)</text>
-        <input placeholder="可在此填写备注" value="{{form.remark}}" data-field="remark" bindinput="handleInput" />
+
+      <view class="field">
+        <text class="field-label">登录账号 / 标识（可选）</text>
+        <input class="input" maxlength="160" placeholder="例如 admin@example.com" data-field="accountIdentifier" value="{{form.accountIdentifier}}" bindinput="handleInput" />
       </view>
-      <view class="form-item">
-        <text class="label">密钥</text>
-        <input placeholder="TOTP Secret" value="{{form.secret}}" data-field="secret" bindinput="handleInput" />
+
+      <view class="field">
+        <text class="field-label">团队备注（可选）</text>
+        <textarea class="textarea remark-input" maxlength="500" placeholder="用途、负责人或应急说明" data-field="remark" value="{{form.remark}}" bindinput="handleInput" />
       </view>
-      <view class="form-row">
-        <view class="form-item half">
-          <text class="label">位数</text>
-          <input type="number" value="{{form.digits}}" data-field="digits" bindinput="handleNumberInput" />
+
+      <block wx:if="{{!editing}}">
+        <view class="field">
+          <view class="field-heading">
+            <text class="field-label">Base32 密钥 *</text>
+            <view class="inline-actions">
+              <button bindtap="handlePasteSecret">粘贴</button>
+              <button bindtap="handleToggleSecret">{{secretVisible ? '隐藏' : '显示'}}</button>
+            </view>
+          </view>
+          <input class="input secret-input" password="{{!secretVisible}}" maxlength="256" placeholder="输入或粘贴 TOTP Secret" data-field="secret" value="{{form.secret}}" bindinput="handleInput" />
+          <text class="field-help">密钥只在此处输入一次，保存后无法查看或导出。</text>
         </view>
-        <view class="form-item half">
-          <text class="label">周期 (秒)</text>
-          <input type="number" value="{{form.period}}" data-field="period" bindinput="handleNumberInput" />
+
+        <view class="config-grid">
+          <view class="field compact">
+            <text class="field-label">算法</text>
+            <picker range="{{algorithms}}" value="{{algorithmIndex}}" bindchange="handleAlgorithmChange"><view class="picker-value">{{algorithms[algorithmIndex]}}</view></picker>
+          </view>
+          <view class="field compact">
+            <text class="field-label">位数</text>
+            <picker range="{{digitsOptions}}" value="{{digitsIndex}}" bindchange="handleDigitsChange"><view class="picker-value">{{digitsOptions[digitsIndex]}} 位</view></picker>
+          </view>
+          <view class="field compact">
+            <text class="field-label">周期</text>
+            <picker range="{{periodOptions}}" value="{{periodIndex}}" bindchange="handlePeriodChange"><view class="picker-value">{{periodOptions[periodIndex]}} 秒</view></picker>
+          </view>
         </view>
-      </view>
-      <button class="button-primary" loading="{{submitting}}" bindtap="handleSubmit">保存</button>
+      </block>
+
+      <view class="immutable-note" wx:else>为避免动态验证码意外失效，密钥、算法、位数和周期保存后不可修改。需要更换时，请新增验证成功后再删除旧记录。</view>
     </view>
 
-    <view class="card">
-      <view class="section-title">扫码导入</view>
-      <view class="scan-desc">支持扫描 otpauth:// 二维码快速导入</view>
-      <button class="button-outline" bindtap="handleScan">扫一扫</button>
-    </view>
+    <view class="safe-note">添加前请确认二维码来源可信。CodePool 不会通过分享卡片、日志或通知展示 TOTP 密钥。</view>
+    <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{editing ? '保存修改' : '加密并保存'}}</button>
   </block>
 </view>

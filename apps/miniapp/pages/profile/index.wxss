@@ -1,91 +1,36 @@
-.page {
-  padding: 16px;
-}
-
-.profile {
-  text-align: center;
-}
-
-.avatar {
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  margin-bottom: 12px;
-}
-
-.name {
-  display: block;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.openid {
-  display: block;
-  margin: 8px 0;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.team-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.team-row:last-child {
-  border-bottom: none;
-}
-
-.danger {
-  text-align: center;
-}
-
-.danger-btn {
-  border-color: #f43f5e;
-  color: #f43f5e;
-}
-
-.login-card {
-  text-align: center;
-  margin-top: 24px;
-}
-
-.login-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.login-desc {
-  color: #6b7280;
-  margin-bottom: 16px;
-}
-
-.profile-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.profile-preview .avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: #f1f5f9;
-}
-
-.profile-preview .nickname {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2933;
-}
-
-.profile-actions {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.profile-header { padding: 10rpx 6rpx 30rpx; }
+.profile-header text,.login-title,.login-desc,.menu-title,.menu-desc,.danger-note,.user-id,.joined { display: block; }
+.eyebrow { color: #15803d; font-size: 20rpx; font-weight: 750; letter-spacing: 3rpx; }
+.page-title { margin-top: 10rpx; font-size: 42rpx; font-weight: 750; }
+.page-desc { margin-top: 8rpx; color: #718078; font-size: 23rpx; }
+.login-card { padding: 44rpx 36rpx; text-align: center; }
+.login-title { font-size: 36rpx; font-weight: 720; }
+.login-desc { margin: 14rpx auto 28rpx; color: #718078; font-size: 24rpx; line-height: 1.6; }
+.avatar-button { width: 180rpx; margin: 0 auto 20rpx; padding: 0; display: flex; flex-direction: column; gap: 8rpx; background: transparent; color: #718078; font-size: 22rpx; }
+.avatar-button image { width: 108rpx; height: 108rpx; border-radius: 50%; background: #edf2ef; }
+.nickname-input { margin-bottom: 18rpx; text-align: center; }
+.consent-row { margin: 18rpx 0; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6rpx; color: #66736b; font-size: 22rpx; }
+.consent-row label { display: flex; align-items: center; }
+.consent-row checkbox { transform: scale(.72); }
+.legal-link { color: #15803d; }
+.account-card { padding: 30rpx; display: flex; align-items: center; gap: 20rpx; border-radius: 30rpx; background: #101820; color: #fff; }
+.avatar-button.signed { width: 96rpx; margin: 0; flex: none; color: #aeb9b2; font-size: 18rpx; }
+.avatar-button.signed image { width: 88rpx; height: 88rpx; }
+.account-info { min-width: 0; flex: 1; }
+.nickname-edit { height: 58rpx; color: #fff; font-size: 32rpx; font-weight: 680; }
+.user-id,.joined { margin-top: 6rpx; overflow: hidden; color: #9eaaa3; font-size: 20rpx; text-overflow: ellipsis; white-space: nowrap; }
+.save-profile { min-height: 68rpx; padding: 12rpx 18rpx; border-radius: 16rpx; background: #2a3a31; color: #7ce79d; font-size: 22rpx; }
+.section-label { margin: 34rpx 8rpx 14rpx; color: #66736b; font-size: 23rpx; font-weight: 650; }
+.menu-card { padding-top: 0; padding-bottom: 0; }
+.menu-row { min-height: 116rpx; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; border-bottom: 1rpx solid #edf1ee; }
+.menu-row:last-child { border-bottom: 0; }
+.menu-row.tap:active { opacity: .6; }
+.menu-title { font-size: 27rpx; font-weight: 630; }
+.menu-desc { max-width: 520rpx; margin-top: 5rpx; overflow: hidden; color: #89958e; font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
+.arrow { color: #89958e; font-size: 36rpx; }
+.version { color: #536058; font-size: 23rpx; }
+.secure-on { color: #15803d; font-size: 22rpx; font-weight: 650; }
+.danger-card button { width: 100%; margin-bottom: 14rpx; }
+.danger-note { color: #987069; font-size: 21rpx; line-height: 1.6; text-align: center; }
+.deletion-status { min-height: 100rpx; margin-bottom: 18rpx; padding: 0 6rpx 18rpx; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; border-bottom: 1rpx solid #edf1ee; }
+.status-badge { flex: none; padding: 7rpx 14rpx; border-radius: 999rpx; background: #fff1f0; color: #a92920; font-size: 20rpx; }

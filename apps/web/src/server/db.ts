@@ -3,6 +3,8 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { env } from "./env";
 
+process.umask(0o077);
+
 const migrations = [
   `
   CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -96,6 +98,88 @@ const migrations = [
 
   CREATE INDEX IF NOT EXISTS idx_audit_team_created ON audit_logs(team_id, created_at DESC);
   `,
+  `
+  ALTER TABLE users ADD COLUMN disabled_at TEXT;
+  ALTER TABLE users ADD COLUMN disabled_reason TEXT;
+  ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1;
+
+  ALTER TABLE teams ADD COLUMN status TEXT NOT NULL DEFAULT 'active'
+    CHECK(status IN ('active', 'disabled'));
+  ALTER TABLE teams ADD COLUMN disabled_at TEXT;
+  ALTER TABLE teams ADD COLUMN disabled_reason TEXT;
+
+  ALTER TABLE vault_items ADD COLUMN status TEXT NOT NULL DEFAULT 'active'
+    CHECK(status IN ('active', 'disabled'));
+  ALTER TABLE vault_items ADD COLUMN disabled_at TEXT;
+  ALTER TABLE vault_items ADD COLUMN disabled_reason TEXT;
+
+  ALTER TABLE team_invites ADD COLUMN revoked_at TEXT;
+
+  CREATE TABLE IF NOT EXISTS platform_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS admin_login_attempts (
+    id TEXT PRIMARY KEY,
+    ip_hash TEXT NOT NULL,
+    email_hash TEXT NOT NULL,
+    succeeded INTEGER NOT NULL DEFAULT 0 CHECK(succeeded IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS account_deletion_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending'
+      CHECK(status IN ('pending', 'approved', 'rejected', 'completed', 'cancelled')),
+    requested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TEXT,
+    note TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS api_rate_limits (
+    bucket TEXT PRIMARY KEY,
+    count INTEGER NOT NULL,
+    reset_at INTEGER NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_users_status_created
+    ON users(status, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_teams_status_updated
+    ON teams(status, updated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_items_status_updated
+    ON vault_items(status, updated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_shares_created
+    ON share_links(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_invites_created
+    ON team_invites(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_audit_created
+    ON audit_logs(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_admin_attempts_ip_created
+    ON admin_login_attempts(ip_hash, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_admin_attempts_email_created
+    ON admin_login_attempts(email_hash, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_deletion_requests_status_created
+    ON account_deletion_requests(status, requested_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_deletion_requests_user_created
+    ON account_deletion_requests(user_id, requested_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_api_rate_limits_reset
+    ON api_rate_limits(reset_at);
+  `,
+  `
+  ALTER TABLE account_deletion_requests ADD COLUMN request_note TEXT;
+  ALTER TABLE account_deletion_requests ADD COLUMN processor_note TEXT;
+  UPDATE account_deletion_requests
+  SET request_note = note
+  WHERE request_note IS NULL AND status IN ('pending', 'cancelled');
+  UPDATE account_deletion_requests
+  SET processor_note = note
+  WHERE processor_note IS NULL AND status IN ('approved', 'rejected', 'completed');
+  `,
 ];
 
 declare global {
@@ -103,9 +187,29 @@ declare global {
 }
 
 function openDatabase() {
-  fs.mkdirSync(path.dirname(env.databasePath), { recursive: true });
+  const dataDirectory = path.dirname(env.databasePath);
+  fs.mkdirSync(dataDirectory, { recursive: true, mode: 0o700 });
+  if (env.isProduction) {
+    const mode = fs.statSync(dataDirectory).mode & 0o777;
+    if ((mode & 0o077) !== 0) {
+      const databaseName = path.basename(env.databasePath);
+      const directoryIsDedicated = fs.readdirSync(dataDirectory).every((name) =>
+        name === databaseName || name.startsWith(`${databaseName}-`) || name === "backups",
+      );
+      if (!directoryIsDedicated) {
+        throw new Error(`Database directory must be private (0700): ${dataDirectory}`);
+      }
+      fs.chmodSync(dataDirectory, 0o700);
+    }
+  }
   const instance = new Database(env.databasePath);
+  fs.chmodSync(env.databasePath, 0o600);
   instance.pragma("journal_mode = WAL");
+  for (const sidecar of [`${env.databasePath}-wal`, `${env.databasePath}-shm`]) {
+    if (fs.existsSync(/* turbopackIgnore: true */ sidecar)) {
+      fs.chmodSync(/* turbopackIgnore: true */ sidecar, 0o600);
+    }
+  }
   instance.pragma("foreign_keys = ON");
   instance.pragma("busy_timeout = 5000");
   instance.exec(

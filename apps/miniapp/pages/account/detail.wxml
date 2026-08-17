@@ -1,44 +1,77 @@
 <view class="page">
-  <view class="card hero">
-    <view class="issuer">{{account ? account.issuer : ''}}</view>
-    <view class="label">{{account ? account.label : ''}}</view>
-    <view class="remark" wx:if="{{account && account.remark}}">{{account.remark}}</view>
-    <view class="code">{{code}}</view>
-    <view class="timer">
-      <text>剩余 {{expiresIn}}s</text>
-      <progress percent="{{progress}}" stroke-width="4" active-color="#00BFA5" />
-    </view>
-    <view class="actions">
-      <button class="button-primary" size="mini" bindtap="handleCopy">复制验证码</button>
-      <button class="button-outline" size="mini" bindtap="handleRefresh">刷新</button>
-    </view>
+  <view class="offline-bar" wx:if="{{offline}}">当前网络不可用</view>
+
+  <view class="card state-card" wx:if="{{loading}}">
+    <text class="state-symbol">···</text>
+    <text class="state-title">正在校验访问权限</text>
   </view>
 
-  <view class="card info">
-    <view class="section">
-      <text class="title">账号信息</text>
-      <view class="row"><text class="label">账号</text><text class="value">{{account && account.accountIdentifier ? account.accountIdentifier : '-'}}</text></view>
-      <view class="row"><text class="label">备注</text><text class="value">{{account && account.remark ? account.remark : '-'}}</text></view>
-      <view class="row"><text class="label">周期</text><text class="value">{{account ? account.period : ''}} s</text></view>
-      <view class="row"><text class="label">位数</text><text class="value">{{account ? account.digits : ''}}</text></view>
-    </view>
-    <view class="section">
-      <text class="title">快捷操作</text>
-      <view class="button-group">
-        <button class="button-outline" size="mini" bindtap="handleEditRemark">编辑备注</button>
-        <button class="button-primary" size="mini" bindtap="handleShare">一次性分享</button>
-        <button class="button-outline" size="mini" bindtap="handleDelete">删除账号</button>
-      </view>
-    </view>
+  <view class="card state-card" wx:elif="{{error}}">
+    <text class="state-symbol">!</text>
+    <text class="state-title">无法查看动态码</text>
+    <text class="state-desc">{{error}}</text>
+    <button class="button-secondary" bindtap="handleRetry">重新加载</button>
   </view>
 
-  <view class="card shares" wx:if="{{shares.length}}">
-    <view class="section-title">分享记录</view>
-    <block wx:for="{{shares}}" wx:key="id">
-      <view class="share-row">
-        <text>#{{item.id}} {{item.mode}} {{item.used ? '已使用' : '可用'}} </text>
-        <text>{{item.expiresAt}}</text>
+  <block wx:elif="{{account}}">
+    <view class="totp-card">
+      <view class="service-row">
+        <view>
+          <text class="service">{{account.issuer}}</text>
+          <text class="label">{{account.label}}</text>
+        </view>
+        <text class="security-badge">TOTP</text>
       </view>
-    </block>
-  </view>
+
+      <view class="code-wrap">
+        <text class="code {{codeVisible ? 'visible' : ''}}">{{codeDisplay}}</text>
+        <text class="code-hint">{{codeVisible ? expiresIn + ' 秒后自动更新' : '点击后按需生成，不会自动批量读取'}}</text>
+      </view>
+
+      <progress wx:if="{{codeVisible}}" percent="{{progress}}" stroke-width="4" activeColor="#7CE79D" backgroundColor="#34443A" />
+      <view class="code-actions">
+        <button class="reveal-button" loading="{{codeLoading}}" bindtap="handleToggleCode">{{codeVisible ? '立即隐藏' : '显示动态码'}}</button>
+        <button class="copy-button" bindtap="handleCopy">复制</button>
+      </view>
+    </view>
+
+    <view class="card info-card">
+      <text class="section-title">账号信息</text>
+      <view class="info-row"><text>登录账号</text><text selectable="true">{{account.accountIdentifier || '未填写'}}</text></view>
+      <view class="info-row"><text>团队备注</text><text>{{account.remark || '未填写'}}</text></view>
+      <view class="info-row"><text>算法配置</text><text>{{account.algorithm}} · {{account.digits}} 位 · {{account.period}} 秒</text></view>
+      <view class="info-row"><text>最近更新</text><text>{{account.updatedText}}</text></view>
+    </view>
+
+    <view class="action-grid">
+      <button class="button-secondary" wx:if="{{account.canManage}}" bindtap="handleEdit">编辑信息</button>
+      <button class="button-secondary" wx:if="{{account.canShare}}" loading="{{sharing}}" bindtap="handleCreateShare">一次性分享</button>
+    </view>
+
+    <view class="card share-ready" wx:if="{{shareToken}}">
+      <text class="share-title">安全分享已就绪</text>
+      <text class="share-desc">有效期至 {{shareExpiresText}}，仅可领取一次。</text>
+      <view class="share-actions">
+        <button class="button-primary button-small" open-type="share">微信转发</button>
+        <button class="button-ghost button-small" bindtap="handleCopyShareToken">复制口令</button>
+      </view>
+    </view>
+
+    <view class="card shares-card">
+      <view class="flex-between">
+        <text class="section-title">最近分享</text>
+        <text class="muted small">{{sharesLoading ? '同步中' : shares.length + ' 条'}}</text>
+      </view>
+      <view class="empty-shares" wx:if="{{!sharesLoading && !shares.length}}">还没有创建过分享</view>
+      <block wx:for="{{shares}}" wx:key="id">
+        <view class="share-row">
+          <view><text class="share-status {{item.active ? 'active' : ''}}">{{item.statusText}}</text><text class="share-time">有效至 {{item.expiresText}}</text></view>
+          <view class="share-side"><text class="share-views">领取 {{item.viewsText}}</text><button wx:if="{{item.active && item.canRevoke}}" class="revoke-share" data-id="{{item.id}}" bindtap="handleRevokeShare">撤销</button></view>
+        </view>
+      </block>
+    </view>
+
+    <button class="button-danger delete-button" wx:if="{{account.canManage}}" bindtap="handleDelete">永久删除动态验证码</button>
+    <view class="safe-note">动态码显示 60 秒后会自动遮挡，切换到后台也会立即清除。请勿截图或转发包含验证码的页面。</view>
+  </block>
 </view>

@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "CodePool 首页"
+  "navigationBarTitleText": "代码池",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

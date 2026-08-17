@@ -2,7 +2,7 @@
   "libVersion": "2.33.0",
   "projectname": "CodePool",
   "setting": {
-    "urlCheck": false,
+    "urlCheck": true,
     "coverView": false,
     "lazyloadPlaceholderEnable": false,
     "skylineRenderEnable": false,
