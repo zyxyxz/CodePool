@@ -57,4 +57,8 @@ npm run db:init      # 初始化/升级数据库
 - 小程序使用 Bearer JWT；管理端使用 `HttpOnly + SameSite=Strict` Cookie。
 - SQLite 适合单实例自托管。多实例或 Serverless 部署应按 [架构文档](docs/ARCHITECTURE.md) 迁移到 PostgreSQL。
 
+## Dokploy 部署
+
+仓库根目录的 `Dockerfile` 会生成 Next.js standalone 镜像，监听 `3000` 端口。生产环境需要将持久化卷挂载到 `/app/apps/web/data`，并配置 `.env.example` 中的生产变量。健康检查路径为 `/api/health`。
+
 更多说明：[产品范围](docs/PRODUCT.md) · [技术架构](docs/ARCHITECTURE.md) · [安全模型](docs/SECURITY.md) · [API](docs/API.md) · [设计系统](docs/DESIGN.md)
