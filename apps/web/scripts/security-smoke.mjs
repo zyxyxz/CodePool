@@ -324,6 +324,13 @@ async function main() {
     });
     expectStatus(disabledLogin, 403, "disabled member login");
     assert.equal(disabledLogin.body.error, "USER_DISABLED");
+    const adminLogout = await call("/api/admin/logout", {
+      method: "POST",
+      headers: { cookie: adminCookie, origin: baseUrl },
+      redirect: "manual",
+    });
+    expectStatus(adminLogout, 303, "admin logout");
+    assert.equal(adminLogout.response.headers.get("location"), "/admin/login");
   }
 
   let limited = null;
