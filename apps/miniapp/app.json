@@ -1,0 +1,52 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/team/index",
+    "pages/logs/index",
+    "pages/profile/index",
+    "pages/account/add",
+    "pages/account/detail",
+    "pages/item/add/index",
+    "pages/item/detail/index",
+    "pages/share/receive"
+  ],
+  "window": {
+    "navigationStyle": "default",
+    "navigationBarBackgroundColor": "#101820",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "CodePool"
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#16A34A",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "assets/icons/home.png",
+        "selectedIconPath": "assets/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/team/index",
+        "text": "团队",
+        "iconPath": "assets/icons/team.png",
+        "selectedIconPath": "assets/icons/team-active.png"
+      },
+      {
+        "pagePath": "pages/logs/index",
+        "text": "日志",
+        "iconPath": "assets/icons/logs.png",
+        "selectedIconPath": "assets/icons/logs-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "assets/icons/profile.png",
+        "selectedIconPath": "assets/icons/profile-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json"
+}

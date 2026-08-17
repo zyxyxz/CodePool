@@ -1,0 +1,56 @@
+<view class="page">
+  <block wx:if="{{needsLogin}}">
+    <view class="card login-card">
+      <view class="login-title">需要登录</view>
+      <view class="login-desc">登录后管理团队成员</view>
+      <view class="profile-preview">
+        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
+        <text class="nickname">{{loginProfile.nickname || 'CodePool 用户'}}</text>
+        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
+      </view>
+      <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
+    </view>
+  </block>
+
+  <block wx:if="{{!needsLogin}}">
+    <view class="card">
+      <view class="flex-between">
+        <view>
+          <text class="title">我的团队</text>
+          <text class="subtitle">切换团队查看成员</text>
+        </view>
+        <button class="button-primary" size="mini" bindtap="handleCreateTeam">新建</button>
+      </view>
+
+      <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
+        <view class="picker-value">{{teams[teamIndex] ? teams[teamIndex].name : '暂无团队'}}</view>
+      </picker>
+    </view>
+
+    <view class="card">
+      <view class="flex-between">
+        <text class="title">成员列表</text>
+        <view class="actions">
+          <button class="button-outline" size="mini" bindtap="handleInvite">邀请</button>
+          <button class="button-outline" size="mini" open-type="share" wx:if="{{shareInviteToken}}">转发</button>
+        </view>
+      </view>
+      <view class="invite-tip" wx:if="{{shareInviteToken}}">
+        分享邀请有效期至 {{shareInviteExpiresText}}
+      </view>
+      <block wx:if="{{members.length === 0}}">
+        <view class="empty">暂无成员</view>
+      </block>
+      <block wx:for="{{members}}" wx:key="id">
+        <view class="member" data-userid="{{item.id}}" bindlongpress="handleMemberActions">
+          <image class="avatar" src="{{item.avatarUrl ? item.avatarUrl : '/assets/avatar-default.png'}}" />
+          <view class="info">
+            <text class="name">{{item.nickname ? item.nickname : '匿名成员'}}</text>
+            <text class="role">角色：{{item.role}}</text>
+          </view>
+          <text class="meta">加入于 {{item.joinedAt}}</text>
+        </view>
+      </block>
+    </view>
+  </block>
+</view>

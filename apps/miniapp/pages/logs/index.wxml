@@ -1,0 +1,49 @@
+<view class="page">
+  <block wx:if="{{needsLogin}}">
+    <view class="card login-card">
+      <view class="login-title">需要登录</view>
+      <view class="login-desc">登录后查看审计日志</view>
+      <view class="profile-preview">
+        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
+        <text class="nickname">{{loginProfile.nickname || 'CodePool 用户'}}</text>
+        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
+      </view>
+      <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
+    </view>
+  </block>
+
+  <block wx:if="{{!needsLogin}}">
+    <view class="card">
+      <view class="flex-between">
+        <view>
+          <text class="title">操作日志</text>
+          <text class="subtitle">透明记录团队内敏感操作</text>
+        </view>
+      </view>
+      <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
+        <view class="picker-value">{{teams[teamIndex] ? teams[teamIndex].name : '全部团队'}}</view>
+      </picker>
+    </view>
+
+    <block wx:if="{{loading}}">
+      <view class="card">加载中...</view>
+    </block>
+
+    <block wx:if="{{!loading && logs.length === 0}}">
+      <view class="card empty">暂无操作日志</view>
+    </block>
+
+    <view class="timeline" wx:if="{{logs.length}}">
+      <block wx:for="{{logs}}" wx:key="id">
+        <view class="timeline-item">
+          <view class="dot"></view>
+          <view class="content">
+            <view class="action">{{item.action}}</view>
+            <view class="meta">{{item.createdAt}} · 用户 {{item.user && item.user.nickname ? item.user.nickname : (item.user ? item.user.id : '系统')}}</view>
+            <view class="meta">目标：{{item.targetType}} #{{item.targetId || '-'}}</view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </block>
+</view>

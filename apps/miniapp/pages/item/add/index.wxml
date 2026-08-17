@@ -1,0 +1,33 @@
+<view class="page">
+  <view class="intro">
+    <text class="eyebrow">NEW POOL ITEM</text>
+    <text class="title">放入团队代码池</text>
+    <text class="desc">正文将加密保存，列表和管理端只展示元数据。</text>
+  </view>
+
+  <view class="card form-card">
+    <view class="field">
+      <text>内容类型</text>
+      <picker range="{{kinds}}" range-key="label" value="{{kindIndex}}" bindchange="handleKindChange">
+        <view class="picker">{{kinds[kindIndex].label}} <text>⌄</text></view>
+      </picker>
+    </view>
+    <view class="field">
+      <text>团队池</text>
+      <picker range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
+        <view class="picker">{{teams[teamIndex] ? teams[teamIndex].name : '请选择'}} <text>⌄</text></view>
+      </picker>
+    </view>
+    <view class="field"><text>标题</text><input placeholder="例如：生产环境发布脚本" data-field="title" value="{{form.title}}" bindinput="handleInput" maxlength="120" /></view>
+    <view class="field"><text>标识（可选）</text><input placeholder="项目、环境或账号" data-field="identifier" value="{{form.identifier}}" bindinput="handleInput" maxlength="160" /></view>
+    <view class="field" wx:if="{{kinds[kindIndex].value === 'snippet'}}"><text>代码语言（可选）</text><input placeholder="shell / sql / javascript" data-field="language" value="{{form.language}}" bindinput="handleInput" maxlength="40" /></view>
+    <view class="field">
+      <text>自动过期</text>
+      <picker range="{{expirations}}" range-key="label" value="{{expirationIndex}}" bindchange="handleExpirationChange">
+        <view class="picker">{{expirations[expirationIndex].label}} <text>⌄</text></view>
+      </picker>
+    </view>
+    <view class="field"><text>内容</text><textarea placeholder="粘贴代码、验证码或说明…" data-field="content" value="{{form.content}}" bindinput="handleInput" maxlength="200000" auto-height /></view>
+  </view>
+  <button class="submit" loading="{{submitting}}" bindtap="handleSubmit">安全保存</button>
+</view>

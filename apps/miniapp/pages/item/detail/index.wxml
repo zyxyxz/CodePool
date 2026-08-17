@@ -1,0 +1,16 @@
+<view class="page">
+  <view class="loading" wx:if="{{loading}}">安全读取中…</view>
+  <block wx:if="{{!loading && item}}">
+    <view class="meta-card">
+      <text class="kind">{{item.kind === 'snippet' ? 'CODE SNIPPET' : item.kind === 'code' ? 'ONE-TIME CODE' : item.kind === 'secret' ? 'SECRET' : 'NOTE'}}</text>
+      <text class="title">{{item.title}}</text>
+      <view class="meta"><text wx:if="{{item.identifier}}">{{item.identifier}}</text><text wx:if="{{item.language}}">{{item.language}}</text><text wx:if="{{item.expiresAt}}">限时内容</text></view>
+    </view>
+    <view class="content-card">
+      <text selectable="true">{{item.content}}</text>
+    </view>
+    <view class="actions"><button bindtap="handleCopy">复制内容</button><button bindtap="handleShare">临时分享</button></view>
+    <button class="delete" bindtap="handleDelete">移出代码池</button>
+    <view class="security">每次读取和分享都会写入安全审计，但不会记录正文。</view>
+  </block>
+</view>

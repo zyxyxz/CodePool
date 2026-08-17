@@ -1,0 +1,13 @@
+.page { padding: 18px 16px 40px; }
+.loading { padding: 80px 0; text-align: center; color: #94a3b8; }
+.meta-card,.content-card { padding: 20px; background: white; border: 1px solid #e7edf3; border-radius: 14px; box-shadow: 0 8px 25px rgba(15,23,42,.04); }
+.kind { color: #16a34a; font-family: monospace; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; }
+.title { display: block; margin-top: 9px; color: #172033; font-size: 22px; font-weight: 800; }
+.meta { display: flex; gap: 10px; margin-top: 12px; color: #8490a1; font-size: 11px; }
+.content-card { margin-top: 14px; min-height: 180px; background: #101820; border-color: #263344; }
+.content-card text { color: #e7edf4; font-family: monospace; font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.actions button { color: white; background: #16a34a; border-radius: 10px; font-size: 14px; font-weight: 700; }
+.actions button+button { color: #172033; background: white; border: 1px solid #dfe6ee; }
+.delete { margin-top: 24px; color: #dc2626; background: transparent; font-size: 13px; }
+.security { margin-top: 20px; color: #94a3b8; font-size: 10px; line-height: 1.6; text-align: center; }

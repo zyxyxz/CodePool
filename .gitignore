@@ -12,14 +12,13 @@ __pycache__/
 .venv/
 .env*/
 
-# FastAPI runtime data
-TeamKey_backend/data/
-
-# Node dependencies / build outputs
-TeamKey_Admin_frontend/node_modules/
-TeamKey_Admin_frontend/dist/
-TeamKey_miniapp/node_modules/
-TeamKey_miniapp/dist/
+# Node dependencies / build outputs / local database
+node_modules/
+.next/
+apps/web/data/
+apps/miniapp/node_modules/
+apps/miniapp/dist/
+*.tsbuildinfo
 
 # Logs
 *.log

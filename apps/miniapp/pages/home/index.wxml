@@ -1,0 +1,84 @@
+<view class="page">
+  <block wx:if="{{needsLogin}}">
+    <view class="card login-card">
+      <view class="login-title">需要登录</view>
+      <view class="login-desc">登录后即可同步团队验证码</view>
+      <view class="profile-preview">
+        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
+        <text class="nickname">{{loginProfile.nickname || 'CodePool 用户'}}</text>
+        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
+      </view>
+      <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
+    </view>
+  </block>
+
+  <block wx:if="{{!needsLogin}}">
+    <view class="header card">
+      <view class="flex-between">
+        <view class="title-block">
+          <text class="title">团队代码池</text>
+          <text class="subtitle">代码 · 验证码 · 临时密文</text>
+        </view>
+        <button class="button-outline" size="mini" bindtap="handleRefresh">刷新</button>
+      </view>
+      <view class="team-picker">
+        <text class="label">当前团队</text>
+        <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
+          <view class="picker-value">{{teams[teamIndex] ? teams[teamIndex].name : '暂无团队'}}</view>
+        </picker>
+      </view>
+      <view class="search-box">
+        <input placeholder="搜索代码、账号或服务" value="{{query}}" bindinput="handleSearchInput" bindconfirm="handleSearchConfirm" />
+      </view>
+    </view>
+
+    <view class="content">
+      <block wx:if="{{loading}}">
+        <view class="card skeleton">加载中...</view>
+      </block>
+
+      <block wx:if="{{!loading && accounts.length === 0 && vaultItems.length === 0}}">
+        <view class="card empty">池里还是空的，添加第一项内容吧</view>
+      </block>
+
+      <view class="section-label" wx:if="{{accounts.length}}">动态验证码</view>
+      <block wx:for="{{accounts}}" wx:key="id">
+        <view class="card account-card" data-id="{{item.id}}" bindtap="goAccountDetail">
+          <view class="flex-between">
+            <view>
+              <view class="issuer">{{item.issuer}}</view>
+              <view class="label">{{item.label}}</view>
+              <view class="identifier" wx:if="{{item.accountIdentifier}}">账号：{{item.accountIdentifier}}</view>
+              <view class="note" wx:if="{{item.remark}}">{{item.remark}}</view>
+            </view>
+            <view class="code">{{item.code || '-- ----'}}</view>
+          </view>
+          <view class="meta">
+            <text class="tag">剩余 {{item.expiresIn}}s</text>
+            <text class="tag">周期 {{item.period}}s</text>
+            <progress percent="{{item.progress}}" stroke-width="4" active-color="#16A34A" background-color="#dcfce7" />
+          </view>
+        </view>
+      </block>
+
+      <view class="section-label" wx:if="{{vaultItems.length}}">共享内容</view>
+      <block wx:for="{{vaultItems}}" wx:key="id">
+        <view class="card item-card" data-id="{{item.id}}" bindtap="goItemDetail">
+          <view class="item-type">{{item.kind === 'snippet' ? '代码片段' : item.kind === 'code' ? '一次性验证码' : item.kind === 'secret' ? '临时密文' : '团队备注'}}</view>
+          <view class="item-title">{{item.title}}</view>
+          <view class="item-meta">
+            <text wx:if="{{item.language}}">{{item.language}}</text>
+            <text wx:if="{{item.identifier}}">{{item.identifier}}</text>
+            <text>点击查看 →</text>
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <view class="fab-container">
+      <button class="fab" bindtap="handleAddContent">添加内容</button>
+      <button class="fab secondary" bindtap="handleAddAccount">添加动态码</button>
+      <button class="fab scan" bindtap="handleQuickScan">扫码</button>
+    </view>
+  </block>
+</view>

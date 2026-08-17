@@ -1,0 +1,40 @@
+<view class="page">
+  <block wx:if="{{needsLogin}}">
+    <view class="card login-card">
+      <view class="login-title">未登录</view>
+      <view class="login-desc">登录后可查看个人与团队信息</view>
+      <view class="profile-preview">
+        <image class="avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
+        <text class="nickname">{{loginProfile.nickname || 'CodePool 用户'}}</text>
+        <button class="button-outline" size="mini" bindtap="handleChooseProfile">使用微信头像昵称</button>
+      </view>
+      <button class="button-primary" loading="{{loginLoading}}" bindtap="handleLogin">微信登录</button>
+    </view>
+  </block>
+
+  <block wx:if="{{!needsLogin}}">
+    <view class="card profile">
+      <image class="avatar" src="{{user && user.avatarUrl ? user.avatarUrl : '/assets/avatar-default.png'}}" />
+      <text class="name">{{user && user.nickname ? user.nickname : '未命名用户'}}</text>
+      <text class="openid" bindtap="handleCopyOpenId">OpenID：{{user ? user.openId : ''}}</text>
+      <view class="profile-actions">
+        <button class="button-outline" size="mini" loading="{{loginLoading}}" bindtap="handleUpdateProfile">更新微信头像昵称</button>
+        <button class="button-outline" size="mini" loading="{{loginLoading}}" bindtap="handleRelogin">刷新登录状态</button>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{teams.length}}">
+      <text class="section-title">我的团队 ({{teams.length}})</text>
+      <block wx:for="{{teams}}" wx:key="teamId">
+        <view class="team-row">
+          <text class="name">{{item.name}}</text>
+          <text class="role">角色：{{item.role}}</text>
+        </view>
+      </block>
+    </view>
+
+    <view class="card danger">
+      <button class="button-outline danger-btn" bindtap="handleLogout">退出登录</button>
+    </view>
+  </block>
+</view>

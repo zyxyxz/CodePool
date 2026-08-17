@@ -1,4 +1,0 @@
-ignoredBuiltDependencies:
-  - '@nestjs/core'
-  - argon2
-  - sqlite3

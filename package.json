@@ -1,0 +1,18 @@
+{
+  "name": "codepool",
+  "version": "0.2.0",
+  "private": true,
+  "workspaces": ["apps/web"],
+  "scripts": {
+    "dev": "npm run dev -w @codepool/web",
+    "build": "npm run build -w @codepool/web",
+    "start": "npm run start -w @codepool/web",
+    "lint": "npm run lint -w @codepool/web",
+    "typecheck": "npm run typecheck -w @codepool/web",
+    "check": "npm run typecheck && npm run build",
+    "db:init": "npm run db:init -w @codepool/web"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

@@ -1,0 +1,14 @@
+.page { padding: 22px 16px 40px; }
+.intro { padding: 8px 4px 22px; display: flex; flex-direction: column; }
+.eyebrow { color: #16a34a; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
+.title { margin-top: 8px; color: #111827; font-size: 24px; font-weight: 800; }
+.desc { margin-top: 8px; color: #7c8798; font-size: 12px; }
+.form-card { padding: 4px 18px; }
+.field { padding: 16px 0; border-bottom: 1px solid #eef2f6; }
+.field:last-child { border-bottom: 0; }
+.field>text { display: block; margin-bottom: 9px; color: #64748b; font-size: 12px; font-weight: 600; }
+.field input,.field textarea,.picker { width: 100%; color: #172033; font-size: 15px; }
+.field textarea { min-height: 130px; font-family: monospace; line-height: 1.55; }
+.picker { display: flex; justify-content: space-between; }
+.picker text { color: #94a3b8; }
+.submit { margin-top: 20px; color: white; background: #16a34a; border-radius: 12px; font-weight: 700; }
