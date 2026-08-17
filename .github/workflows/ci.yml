@@ -43,7 +43,10 @@ jobs:
             curl --fail --silent http://127.0.0.1:3100/api/health >/dev/null && break
             sleep 1
           done
-          npm run smoke:security
+          if ! npm run smoke:security; then
+            cat /tmp/codepool-ci.log
+            exit 1
+          fi
       - run: npm audit --omit=dev --audit-level=high
 
   container:

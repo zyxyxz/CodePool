@@ -219,17 +219,23 @@ function openDatabase() {
     )`,
   );
 
-  migrations.forEach((sql, index) => {
-    const version = index + 1;
+  const applyMigration = instance.transaction((sql: string, version: number) => {
     const applied = instance
       .prepare("SELECT 1 FROM schema_migrations WHERE version = ?")
       .get(version);
     if (!applied) {
-      instance.transaction(() => {
-        instance.exec(sql);
-        instance.prepare("INSERT INTO schema_migrations(version) VALUES (?)").run(version);
-      })();
+      instance.exec(sql);
+      instance.prepare("INSERT INTO schema_migrations(version) VALUES (?)").run(version);
     }
+  });
+
+  migrations.forEach((sql, index) => {
+    const version = index + 1;
+    // Next.js evaluates route modules in parallel during production builds. An
+    // IMMEDIATE transaction serializes the read-before-apply decision across
+    // those worker processes, so a fresh database cannot run the same ALTER
+    // TABLE migration twice.
+    applyMigration.immediate(sql, version);
   });
   return instance;
 }

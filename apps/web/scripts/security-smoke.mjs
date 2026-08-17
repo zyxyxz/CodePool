@@ -77,6 +77,11 @@ async function main() {
   });
   const oversized = await call("/api/v1/auth/login", {
     method: "POST",
+    // The server intentionally cancels the unread remainder when rejecting an
+    // oversized chunked body. Do not let undici reuse that HTTP/1.1 socket for
+    // the next assertion; Linux can otherwise surface the close as ECONNRESET
+    // on an unrelated request.
+    headers: { connection: "close" },
     body: oversizedStream,
     duplex: "half",
   });
