@@ -61,4 +61,4 @@ npm run db:init      # 初始化/升级数据库
 
 仓库根目录的 `Dockerfile` 会生成 Next.js standalone 镜像，监听 `3000` 端口。生产环境需要将持久化卷挂载到 `/app/apps/web/data`，并配置 `.env.example` 中的生产变量。健康检查路径为 `/api/health`。
 
-更多说明：[产品范围](docs/PRODUCT.md) · [技术架构](docs/ARCHITECTURE.md) · [安全模型](docs/SECURITY.md) · [API](docs/API.md) · [设计系统](docs/DESIGN.md)
+更多说明：[产品范围](docs/PRODUCT.md) · [技术架构](docs/ARCHITECTURE.md) · [安全模型](docs/SECURITY.md) · [API](docs/API.md) · [设计系统](docs/DESIGN.md) · [部署运维](docs/DEPLOYMENT.md)
