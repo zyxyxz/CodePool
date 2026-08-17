@@ -54,53 +54,121 @@ function deploymentRows(payload) {
   return [];
 }
 
-const queued = await dokploy("application.deploy", {
-  method: "POST",
-  body: JSON.stringify({ applicationId, title, description }),
-});
-const queuedId = typeof queued === "string" ? queued : queued?.deploymentId || queued?.id;
-console.log(`Dokploy accepted verified commit ${commitSha.slice(0, 12)}.`);
-
-let deployment;
-for (let attempt = 0; attempt < 120; attempt += 1) {
+async function currentDeployments() {
   const payload = await dokploy(`deployment.all?applicationId=${encodeURIComponent(applicationId)}`);
-  deployment = deploymentRows(payload)
-    .filter((entry) => {
-      if (queuedId && entry.deploymentId === queuedId) return true;
-      const createdAt = new Date(entry.createdAt || 0).getTime();
-      return createdAt >= requestedAt - 5_000 && entry.title === title;
-    })
-    .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))[0];
+  return deploymentRows(payload);
+}
 
-  if (deployment?.status === "done") break;
-  if (deployment && ["error", "cancelled"].includes(deployment.status)) {
-    throw new Error(`Dokploy deployment ${deployment.deploymentId} ended with ${deployment.status}`);
+async function assertIdle() {
+  const application = await dokploy(`application.one?applicationId=${encodeURIComponent(applicationId)}`);
+  if (application?.sourceType !== "git" || application?.customGitBranch !== "production" || application?.autoDeploy !== false) {
+    throw new Error("Dokploy must use the production branch with autoDeploy disabled");
   }
-  await delay(5_000);
+  const active = (await currentDeployments()).filter((entry) => ["queued", "running"].includes(entry.status));
+  if (active.length) {
+    throw new Error(`Dokploy already has an active deployment: ${active.map((entry) => entry.deploymentId).join(", ")}`);
+  }
+  return application;
 }
 
-if (deployment?.status !== "done") {
-  throw new Error("Dokploy deployment did not finish within 10 minutes");
-}
-console.log(`Dokploy deployment ${deployment.deploymentId} completed.`);
+let deploymentQueued = false;
+let cleanupStarted = false;
 
-let health;
-for (let attempt = 0; attempt < 60; attempt += 1) {
-  try {
-    const response = await fetch(`${productionUrl}/api/health`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
-    });
-    const payload = await response.json();
-    if (response.ok && payload?.data?.status === "ok" && payload?.data?.database === "ready") {
-      health = payload.data;
-      break;
+async function cancelOutstandingDeployment() {
+  if (!deploymentQueued || cleanupStarted) return;
+  cleanupStarted = true;
+  for (const path of ["application.cancelDeployment", "application.cleanQueues"]) {
+    try {
+      await dokploy(path, {
+        method: "POST",
+        body: JSON.stringify({ applicationId }),
+      });
+    } catch (error) {
+      console.error(`Cleanup warning: ${error instanceof Error ? error.message : String(error)}`);
     }
-  } catch {
-    // A rolling deployment can briefly close the previous connection.
   }
-  await delay(3_000);
 }
 
-if (!health) throw new Error("Production health check did not recover after deployment");
-console.log(`Production is healthy (${health.service} ${health.version}, database ${health.database}).`);
+async function deploy() {
+  const application = await assertIdle();
+  const buildArgs = String(application?.buildArgs || "")
+    .split(/\r?\n/)
+    .filter((line) => line && !line.startsWith("CODEPOOL_COMMIT_SHA="));
+  buildArgs.push(`CODEPOOL_COMMIT_SHA=${commitSha}`);
+  await dokploy("application.update", {
+    method: "POST",
+    body: JSON.stringify({ applicationId, buildArgs: buildArgs.join("\n") }),
+  });
+
+  const queued = await dokploy("application.deploy", {
+    method: "POST",
+    body: JSON.stringify({ applicationId, title, description }),
+  });
+  deploymentQueued = true;
+  const queuedId = typeof queued === "string" ? queued : queued?.deploymentId || queued?.id;
+  console.log(`Dokploy accepted verified commit ${commitSha.slice(0, 12)}.`);
+
+  let deployment;
+  for (let attempt = 0; attempt < 96; attempt += 1) {
+    deployment = (await currentDeployments())
+      .filter((entry) => {
+        if (queuedId && entry.deploymentId === queuedId) return true;
+        const createdAt = new Date(entry.createdAt || 0).getTime();
+        return createdAt >= requestedAt - 5_000 && entry.title === title;
+      })
+      .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))[0];
+
+    if (deployment?.status === "done") break;
+    if (deployment && ["error", "cancelled"].includes(deployment.status)) {
+      throw new Error(`Dokploy deployment ${deployment.deploymentId} ended with ${deployment.status}`);
+    }
+    await delay(5_000);
+  }
+
+  if (deployment?.status !== "done") {
+    throw new Error("Dokploy deployment did not finish within 8 minutes");
+  }
+  deploymentQueued = false;
+  console.log(`Dokploy deployment ${deployment.deploymentId} completed.`);
+
+  let health;
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      const response = await fetch(`${productionUrl}/api/health`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+      });
+      const payload = await response.json();
+      if (
+        response.ok &&
+        payload?.data?.status === "ok" &&
+        payload?.data?.database === "ready" &&
+        payload?.data?.commit === commitSha
+      ) {
+        health = payload.data;
+        break;
+      }
+    } catch {
+      // A rolling deployment can briefly close the previous connection.
+    }
+    await delay(3_000);
+  }
+
+  if (!health) throw new Error(`Production did not report verified commit ${commitSha.slice(0, 12)} after deployment`);
+  console.log(`Production is healthy at ${health.commit.slice(0, 12)} (${health.service} ${health.version}, database ${health.database}).`);
+}
+
+if (process.argv.includes("--preflight")) {
+  await assertIdle();
+  console.log("Dokploy release queue is idle and production branch deployment is enforced.");
+} else {
+  process.once("SIGTERM", () => {
+    cancelOutstandingDeployment().finally(() => process.exit(143));
+  });
+  try {
+    await deploy();
+  } catch (error) {
+    await cancelOutstandingDeployment();
+    throw error;
+  }
+}

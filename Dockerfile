@@ -13,11 +13,13 @@ COPY . .
 RUN npm run build
 
 FROM node:22-alpine AS runner
+ARG CODEPOOL_COMMIT_SHA=unknown
 WORKDIR /app/apps/web
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
+    CODEPOOL_COMMIT_SHA=${CODEPOOL_COMMIT_SHA} \
     CODEPOOL_DATABASE_PATH=/app/apps/web/data/codepool.db
 
 RUN addgroup --system --gid 1001 nodejs \

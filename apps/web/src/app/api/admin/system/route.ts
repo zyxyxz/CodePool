@@ -104,6 +104,7 @@ export async function GET(request: NextRequest) {
         status: integrityOk ? "ok" : "error",
         health,
         version: process.env.npm_package_version || "0.3.0",
+        commit: process.env.CODEPOOL_COMMIT_SHA || "unknown",
         nodeVersion: process.version,
         environment: env.isProduction ? "production" : "development",
         uptimeSeconds: Math.floor(process.uptime()),
