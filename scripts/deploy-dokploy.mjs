@@ -26,10 +26,12 @@ function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function dokploy(path, init = {}) {
+async function dokploy(path, init = {}, timeoutMilliseconds = 30_000) {
+  const timeoutSignal = AbortSignal.timeout(timeoutMilliseconds);
+  const signal = init.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
   const response = await fetch(`${apiBase}/api/${path}`, {
     ...init,
-    signal: AbortSignal.timeout(30_000),
+    signal,
     headers: {
       "content-type": "application/json",
       "x-api-key": apiKey,
@@ -59,34 +61,149 @@ async function currentDeployments() {
   return deploymentRows(payload);
 }
 
+async function currentQueueJobs() {
+  return deploymentRows(await dokploy("deployment.queueList"));
+}
+
+function pendingQueueJobsForApplication(rows) {
+  return rows.filter((entry) => {
+    const state = String(entry?.state || "");
+    return entry?.data?.applicationId === applicationId && !["completed", "failed"].includes(state);
+  });
+}
+
+function deploymentMatchesRelease(entry, queuedId = "") {
+  if (queuedId && entry?.deploymentId === queuedId) return true;
+  const createdAt = new Date(entry?.createdAt || 0).getTime();
+  const entryDescription = String(entry?.description || "");
+  // Dokploy starts with our CI metadata, then replaces it with cloned commit
+  // metadata for generic Git sources. Accept either representation.
+  return createdAt >= requestedAt - 5_000 && (
+    entry?.title === title ||
+    entryDescription === description ||
+    entryDescription.includes(commitSha)
+  );
+}
+
+function newestReleaseDeployment(rows, queuedId = "") {
+  return rows
+    .filter((entry) => deploymentMatchesRelease(entry, queuedId))
+    .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))[0];
+}
+
 async function assertIdle() {
   const application = await dokploy(`application.one?applicationId=${encodeURIComponent(applicationId)}`);
   if (application?.sourceType !== "git" || application?.customGitBranch !== "production" || application?.autoDeploy !== false) {
     throw new Error("Dokploy must use the production branch with autoDeploy disabled");
   }
-  const active = (await currentDeployments()).filter((entry) => ["queued", "running"].includes(entry.status));
-  if (active.length) {
-    throw new Error(`Dokploy already has an active deployment: ${active.map((entry) => entry.deploymentId).join(", ")}`);
+  const [deployments, queueJobs] = await Promise.all([currentDeployments(), currentQueueJobs()]);
+  const active = deployments.filter((entry) => entry.status === "running");
+  const pending = pendingQueueJobsForApplication(queueJobs);
+  if (active.length || pending.length) {
+    const ids = [
+      ...active.map((entry) => `deployment:${entry.deploymentId}`),
+      ...pending.map((entry) => `queue:${entry.id || "unknown"}:${entry.state || "unknown"}`),
+    ];
+    throw new Error(`Dokploy already has an active or queued deployment: ${ids.join(", ")}`);
   }
   return application;
 }
 
-let deploymentQueued = false;
-let cleanupStarted = false;
+let deploymentRequested = false;
+let cleanupPromise;
+let deployRequestController;
+let deployRequestPromise;
+let trackedDeploymentId = "";
 
-async function cancelOutstandingDeployment() {
-  if (!deploymentQueued || cleanupStarted) return;
-  cleanupStarted = true;
-  for (const path of ["application.cancelDeployment", "application.cleanQueues"]) {
+async function cleanupRequest(path, init = {}) {
+  return dokploy(path, init, 2_000);
+}
+
+async function performOutstandingDeploymentCleanup() {
+  const pendingDeployRequest = deployRequestPromise;
+  deployRequestController?.abort();
+  if (pendingDeployRequest) {
     try {
-      await dokploy(path, {
-        method: "POST",
-        body: JSON.stringify({ applicationId }),
-      });
-    } catch (error) {
-      console.error(`Cleanup warning: ${error instanceof Error ? error.message : String(error)}`);
+      await pendingDeployRequest;
+    } catch {
+      // The expected path when an in-flight enqueue request is aborted.
     }
   }
+
+  // Self-hosted Dokploy cannot cancel an active application deployment through
+  // its public API. Remove waiting work and fail closed if an active process
+  // does not reach a terminal state within the cleanup window.
+  try {
+    await cleanupRequest("application.cleanQueues", {
+      method: "POST",
+      body: JSON.stringify({ applicationId }),
+    });
+  } catch (error) {
+    console.error(`Cleanup warning: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  let quietSince = 0;
+  const cleanupDeadline = Date.now() + 7_000;
+  while (Date.now() < cleanupDeadline) {
+    let deployments;
+    let queueJobs;
+    try {
+      // Read the queue first. Once an active job disappears from the queue,
+      // its deployment row has already been created and will be visible here.
+      queueJobs = deploymentRows(await cleanupRequest("deployment.queueList"));
+      if (pendingQueueJobsForApplication(queueJobs).length) {
+        // A request that raced the initial cleanup may have arrived late.
+        // Observe it first (resetting the quiet window), then remove it if it
+        // is still waiting. Active jobs remain visible until terminal.
+        await cleanupRequest("application.cleanQueues", {
+          method: "POST",
+          body: JSON.stringify({ applicationId }),
+        });
+      }
+      deployments = deploymentRows(await cleanupRequest(
+        `deployment.all?applicationId=${encodeURIComponent(applicationId)}`,
+      ));
+    } catch (error) {
+      throw new Error(`Could not inspect Dokploy during cleanup: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    const deployment = trackedDeploymentId
+      ? deployments.find((entry) => entry.deploymentId === trackedDeploymentId)
+      : newestReleaseDeployment(deployments);
+    if (deployment?.deploymentId) trackedDeploymentId = deployment.deploymentId;
+
+    const stillRunning = deployment?.status === "running";
+    const pending = pendingQueueJobsForApplication(queueJobs);
+    if (!stillRunning && pending.length === 0) {
+      if (!quietSince) quietSince = Date.now();
+      if (Date.now() - quietSince >= 3_000) {
+        deploymentRequested = false;
+        return;
+      }
+    } else {
+      quietSince = 0;
+    }
+    await delay(500);
+  }
+
+  const queueJobs = deploymentRows(await cleanupRequest("deployment.queueList"));
+  const deployments = deploymentRows(await cleanupRequest(
+    `deployment.all?applicationId=${encodeURIComponent(applicationId)}`,
+  ));
+  const deployment = trackedDeploymentId
+    ? deployments.find((entry) => entry.deploymentId === trackedDeploymentId)
+    : newestReleaseDeployment(deployments);
+  const pending = pendingQueueJobsForApplication(queueJobs);
+  const state = deployment?.status === "running" || pending.length
+    ? "a running or queued release"
+    : "the required continuous idle window";
+  throw new Error(`Dokploy cleanup could not clear ${state}; later releases will remain blocked by preflight.`);
+}
+
+function cancelOutstandingDeployment() {
+  if (!deploymentRequested) return Promise.resolve();
+  if (!cleanupPromise) cleanupPromise = performOutstandingDeploymentCleanup();
+  return cleanupPromise;
 }
 
 async function deploy() {
@@ -100,26 +217,29 @@ async function deploy() {
     body: JSON.stringify({ applicationId, buildArgs: buildArgs.join("\n") }),
   });
 
-  const queued = await dokploy("application.deploy", {
-    method: "POST",
-    body: JSON.stringify({ applicationId, title, description }),
-  });
-  deploymentQueued = true;
+  // Set this before the request: the server may enqueue successfully even if
+  // the client loses the response or the Actions runner is interrupted.
+  deploymentRequested = true;
+  deployRequestController = new AbortController();
+  let queued;
+  try {
+    deployRequestPromise = dokploy("application.deploy", {
+      method: "POST",
+      body: JSON.stringify({ applicationId, title, description }),
+      signal: deployRequestController.signal,
+    });
+    queued = await deployRequestPromise;
+  } finally {
+    deployRequestController = undefined;
+    deployRequestPromise = undefined;
+  }
   const queuedId = typeof queued === "string" ? queued : queued?.deploymentId || queued?.id;
   console.log(`Dokploy accepted verified commit ${commitSha.slice(0, 12)}.`);
 
   let deployment;
   for (let attempt = 0; attempt < 96; attempt += 1) {
-    deployment = (await currentDeployments())
-      .filter((entry) => {
-        if (queuedId && entry.deploymentId === queuedId) return true;
-        const createdAt = new Date(entry.createdAt || 0).getTime();
-        // Dokploy replaces the requested title/description with the cloned
-        // commit metadata for generic Git sources. Match either representation.
-        const matchesCommit = String(entry.description || "").includes(commitSha);
-        return createdAt >= requestedAt - 5_000 && (entry.title === title || matchesCommit);
-      })
-      .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))[0];
+    deployment = newestReleaseDeployment(await currentDeployments(), queuedId);
+    if (deployment?.deploymentId) trackedDeploymentId = deployment.deploymentId;
 
     if (deployment?.status === "done") break;
     if (deployment && ["error", "cancelled"].includes(deployment.status)) {
@@ -131,7 +251,7 @@ async function deploy() {
   if (deployment?.status !== "done") {
     throw new Error("Dokploy deployment did not finish within 8 minutes");
   }
-  deploymentQueued = false;
+  deploymentRequested = false;
   console.log(`Dokploy deployment ${deployment.deploymentId} completed.`);
 
   let health;
@@ -165,9 +285,16 @@ if (process.argv.includes("--preflight")) {
   await assertIdle();
   console.log("Dokploy release queue is idle and production branch deployment is enforced.");
 } else {
-  process.once("SIGTERM", () => {
-    cancelOutstandingDeployment().finally(() => process.exit(143));
-  });
+  let shutdownStarted = false;
+  const exitAfterCleanup = (code) => {
+    if (shutdownStarted) return;
+    shutdownStarted = true;
+    cancelOutstandingDeployment()
+      .catch((error) => console.error(`Cleanup failed: ${error instanceof Error ? error.message : String(error)}`))
+      .finally(() => process.exit(code));
+  };
+  process.once("SIGINT", () => exitAfterCleanup(130));
+  process.once("SIGTERM", () => exitAfterCleanup(143));
   try {
     await deploy();
   } catch (error) {

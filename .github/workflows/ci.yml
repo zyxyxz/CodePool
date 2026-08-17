@@ -92,4 +92,6 @@ jobs:
           promoted_sha="$(git ls-remote origin refs/heads/production | cut -f1)"
           test "$promoted_sha" = "$GITHUB_SHA"
       - name: Deploy verified commit through Dokploy API
-        run: node scripts/deploy-dokploy.mjs
+        # Replace the shell so Actions cancellation signals reach the cleanup
+        # handlers directly before the runner's hard-kill deadline.
+        run: exec node scripts/deploy-dokploy.mjs
