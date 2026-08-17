@@ -114,7 +114,10 @@ async function deploy() {
       .filter((entry) => {
         if (queuedId && entry.deploymentId === queuedId) return true;
         const createdAt = new Date(entry.createdAt || 0).getTime();
-        return createdAt >= requestedAt - 5_000 && entry.title === title;
+        // Dokploy replaces the requested title/description with the cloned
+        // commit metadata for generic Git sources. Match either representation.
+        const matchesCommit = String(entry.description || "").includes(commitSha);
+        return createdAt >= requestedAt - 5_000 && (entry.title === title || matchesCommit);
       })
       .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))[0];
 
