@@ -10,11 +10,11 @@
     <view class="brand-mark">CP</view>
     <view class="login-title">进入 {{workspaceName}}</view>
     <view class="login-desc">微信登录仅用于识别团队成员。不会读取通讯录、手机号或聊天记录。</view>
-    <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" aria-label="选择头像">
+    <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{loginLoading}}" aria-label="选择头像">
       <image class="login-avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
       <text>更换头像</text>
     </button>
-    <input class="input nickname-input" type="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" bindinput="handleNicknameInput" />
+    <input class="input nickname-input" type="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || nicknameReviewInFlight}}" bindinput="handleNicknameInput" bindblur="handleNicknameBlur" bindnicknamereview="handleNicknameReview" />
     <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="#15803D" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
     <button class="button-primary login-button" loading="{{loginLoading}}" disabled="{{loginLoading || !legalConsent}}" bindtap="handleLogin">微信快捷登录</button>
     <view class="privacy-copy">微信登录仅处理完成身份识别、团队协作和安全审计所需的信息。</view>

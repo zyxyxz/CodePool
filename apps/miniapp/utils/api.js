@@ -120,10 +120,28 @@ function onUnauthorized(handler) {
   unauthorizedHandler = typeof handler === 'function' ? handler : null;
 }
 
-function normalizeAvatarUrl(url) {
-  if (typeof url !== 'string') return undefined;
+function resolveAvatarUrl(url) {
+  if (typeof url !== 'string') return '';
   const trimmed = url.trim();
-  return /^https:\/\//i.test(trimmed) ? trimmed : undefined;
+  if (/^https:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.indexOf('/') === 0 && trimmed.indexOf('/assets/') !== 0) {
+    return `${BASE_URL}${trimmed}`;
+  }
+  return trimmed;
+}
+
+function normalizeUser(user) {
+  if (!user || typeof user !== 'object') return user;
+  const avatarUrl = resolveAvatarUrl(user.avatarUrl || user.avatar_url || '');
+  return {
+    ...user,
+    id: user.id || user.userId || user.user_id,
+    openId: user.openId || user.open_id,
+    avatarUrl,
+    avatar_url: avatarUrl,
+    createdAt: user.createdAt || user.created_at,
+    lastLoginAt: user.lastLoginAt || user.last_login_at,
+  };
 }
 
 function normalizeTeam(team) {
@@ -178,11 +196,13 @@ function normalizeItem(item) {
 function normalizeMember(member) {
   if (!member || typeof member !== 'object') return member;
   const userId = member.userId || member.user_id || member.id;
+  const avatarUrl = resolveAvatarUrl(member.avatarUrl || member.avatar_url || '');
   return {
     ...member,
     id: userId,
     userId,
-    avatarUrl: member.avatarUrl || member.avatar_url || '',
+    avatarUrl,
+    avatar_url: avatarUrl,
     joinedAt: member.joinedAt || member.joined_at,
     expiresAt: member.expiresAt || member.expires_at,
   };
@@ -206,16 +226,27 @@ const api = {
     data: {
       wx_code: wxCode,
       nickname: profile.nickname,
-      avatar_url: normalizeAvatarUrl(profile.avatar_url || profile.avatarUrl),
       open_id: profile.open_id || profile.openId,
     },
   }).then((res) => ({
     token: res.accessToken || res.access_token || res.token,
-    user: res.user,
+    user: normalizeUser(res.user),
   })),
   fetchMe: () => request({ url: '/auth/me' }).then((res) => ({
     ...res,
+    user: normalizeUser(res && res.user),
     teams: normalizeTeams(res && res.teams),
+  })),
+  updateProfile: (payload) => request({
+    url: '/auth/me',
+    method: 'PATCH',
+    data: {
+      nickname: payload.nickname,
+      avatar: payload.avatar,
+    },
+  }).then((res) => ({
+    ...res,
+    user: normalizeUser(res && res.user ? res.user : res),
   })),
   fetchDeletionRequest: () => request({ url: '/auth/deletion-request' }),
   createDeletionRequest: (note) => request({
@@ -295,7 +326,10 @@ const api = {
   fetchLogs: (teamId, limit = 100) => request({
     url: '/audit/logs',
     data: teamId ? { team_id: teamId, limit } : {},
-  }).then(listFromResponse),
+  }).then((res) => listFromResponse(res).map((log) => ({
+    ...log,
+    actorAvatar: resolveAvatarUrl(log.actorAvatar || log.actor_avatar || ''),
+  }))),
   createShare: (payload) => request({
     url: '/shares',
     method: 'POST',

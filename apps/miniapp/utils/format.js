@@ -15,6 +15,8 @@ const ROLE_LABELS = {
 
 const ACTION_LABELS = {
   AUTH_LOGIN: '登录 CodePool',
+  PROFILE_UPDATE: '更新个人资料',
+  PROFILE_AVATAR_UPDATE: '更新个人头像',
   ACCOUNT_DELETION_REQUEST: '提交账号注销申请',
   ACCOUNT_DELETION_WITHDRAW: '撤回账号注销申请',
   TEAM_CREATE: '创建团队',
@@ -84,6 +86,9 @@ function friendlyError(error, fallback = '操作失败，请稍后重试') {
   if (!error) return fallback;
   if (error.code === 'UNAUTHORIZED') return '登录已过期，请重新登录';
   if (error.code === 'ACCOUNT_DISABLED' || error.code === 'USER_DISABLED') return '账号已被停用，请联系团队管理员';
+  if (error.code === 'WECHAT_CODE_INVALID') return '微信登录凭证已失效，请重新点击登录';
+  if (error.code === 'WECHAT_CONFIGURATION_ERROR') return '微信登录配置异常，请联系管理员';
+  if (error.code === 'WECHAT_UPSTREAM_UNAVAILABLE') return '微信登录服务繁忙，请稍后重试';
   if (error.statusCode === 429 || error.code === 'RATE_LIMITED') return '操作过于频繁，请稍后再试';
   if (error.code === 'MAINTENANCE_MODE') return '系统正在维护，请稍后再试';
   if (error.offline || error.code === 'NETWORK_ERROR') return '网络不可用，请检查连接';

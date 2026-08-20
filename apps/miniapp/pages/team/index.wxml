@@ -4,11 +4,11 @@
   <view class="card login-card" wx:if="{{needsLogin}}">
     <text class="login-title">登录后管理团队</text>
     <text class="login-desc">登录只用于验证团队身份和记录必要的安全操作。</text>
-    <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar">
+    <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{loginLoading}}">
       <image class="login-avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
       <text>更换头像</text>
     </button>
-    <input class="input nickname-input" type="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" bindinput="handleNicknameInput" />
+    <input class="input nickname-input" type="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || nicknameReviewInFlight}}" bindinput="handleNicknameInput" bindblur="handleNicknameBlur" bindnicknamereview="handleNicknameReview" />
     <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="#15803D" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
     <button class="button-primary" loading="{{loginLoading}}" disabled="{{loginLoading || !legalConsent}}" bindtap="handleLogin">微信快捷登录</button>
   </view>

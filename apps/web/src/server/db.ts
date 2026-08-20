@@ -180,6 +180,13 @@ const migrations = [
   SET processor_note = note
   WHERE processor_note IS NULL AND status IN ('approved', 'rejected', 'completed');
   `,
+  `
+  ALTER TABLE users ADD COLUMN avatar_blob BLOB;
+  ALTER TABLE users ADD COLUMN avatar_mime TEXT
+    CHECK(avatar_mime IS NULL OR avatar_mime IN ('image/jpeg', 'image/png', 'image/webp'));
+  ALTER TABLE users ADD COLUMN avatar_version INTEGER NOT NULL DEFAULT 0;
+  UPDATE users SET avatar_url = NULL;
+  `,
 ];
 
 declare global {

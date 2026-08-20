@@ -52,8 +52,7 @@ export function fail(error: unknown) {
   );
 }
 
-export async function jsonBody(request: NextRequest) {
-  const maxBytes = 256 * 1024;
+export async function jsonBody(request: NextRequest, maxBytes = 256 * 1024) {
   const declaredLength = Number(request.headers.get("content-length") || 0);
   if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
     throw new ApiError(413, "请求内容过大", "PAYLOAD_TOO_LARGE");

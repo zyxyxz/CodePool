@@ -29,5 +29,5 @@ module.exports = {
   PRODUCTION_BASE_URL,
   API_PREFIX: '/api/v1',
   REQUEST_TIMEOUT: 15000,
-  CLIENT_VERSION: '1.0.0',
+  CLIENT_VERSION: '0.3.1',
 };

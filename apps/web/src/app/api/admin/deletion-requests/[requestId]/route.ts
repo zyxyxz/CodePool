@@ -91,7 +91,9 @@ export async function PATCH(request: NextRequest, context: Context) {
         const deletedOpenId = `deleted_${randomBytes(24).toString("hex")}`;
         db.prepare(
           `UPDATE users SET open_id = ?, union_id = NULL, nickname = '已注销用户',
-            avatar_url = NULL, status = 'disabled', disabled_at = CURRENT_TIMESTAMP,
+            avatar_url = NULL, avatar_blob = NULL, avatar_mime = NULL,
+            avatar_version = avatar_version + 1,
+            status = 'disabled', disabled_at = CURRENT_TIMESTAMP,
             disabled_reason = '账号注销完成', session_version = session_version + 1
            WHERE id = ?`,
         ).run(deletedOpenId, current.userId);

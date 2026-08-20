@@ -7,7 +7,8 @@
 ```
 
 业务失败同时使用对应 HTTP 状态码；触发限流时返回 `429` 和 `Retry-After`。所有 API
-响应默认 `Cache-Control: no-store`。
+JSON API 响应默认 `Cache-Control: no-store`；头像二进制响应使用私有缓存并在每次复用前以
+ETag 重新验证。
 
 ## 成员 API `/api/v1`
 
@@ -18,7 +19,9 @@
 | --- | --- | --- |
 | POST | `/auth/login` | 微信 code 登录；首次登录创建默认团队 |
 | GET | `/config` | 公共运营配置、公告、维护状态和安全配额，不含秘密 |
-| GET | `/auth/me` | 当前成员、团队和角色 |
+| GET/PATCH | `/auth/me` | 当前成员、团队和角色，或更新昵称 |
+| POST | `/auth/avatar` | 上传并净化头像；仅限 JPEG、PNG、WebP，原图不超过 512 KiB |
+| GET | `/avatars/:userId` | 使用成员 API 下发的短时 HMAC 地址读取头像；签名失效、停用或注销后返回 404 |
 | GET/POST/DELETE | `/auth/deletion-request` | 查询、提交或撤回注销申请 |
 | GET/POST | `/teams` | 团队列表或创建团队 |
 | GET | `/teams/:id/members` | 团队成员列表 |
@@ -79,5 +82,7 @@ Origin/Host/Proto，并写入脱敏审计日志。
 - `403 FORBIDDEN`：角色或团队状态不允许操作。
 - `409`：资源状态冲突，例如注销前仍拥有活跃团队。
 - `410`：分享或邀请已过期、撤销、使用或领取完毕。
-- `413 PAYLOAD_TOO_LARGE`：JSON 请求体超过 256 KiB。
+- `413 PAYLOAD_TOO_LARGE`：普通 JSON 请求体超过 256 KiB；头像请求信封上限为 768 KiB，
+  解码后的原图上限为 512 KiB。
+- `422 INVALID_AVATAR_DATA`：头像数据、文件类型或图片尺寸不符合要求。
 - `429 RATE_LIMITED`：请求过于频繁；按 `Retry-After` 重试。

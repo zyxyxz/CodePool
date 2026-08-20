@@ -1,6 +1,6 @@
 {
   "name": "codepool",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "workspaces": ["apps/web"],
   "scripts": {
@@ -9,7 +9,8 @@
     "start": "npm run start -w @codepool/web",
     "lint": "npm run lint -w @codepool/web",
     "typecheck": "npm run typecheck -w @codepool/web",
-    "check": "npm run lint && npm run typecheck && npm run check:miniapp && npm run build",
+    "test": "npm run test -w @codepool/web",
+    "check": "npm run lint && npm run typecheck && npm run check:miniapp && npm run test && npm run build",
     "check:miniapp": "node scripts/check-miniapp.mjs",
     "smoke:security": "node apps/web/scripts/security-smoke.mjs",
     "db:init": "npm run db:init -w @codepool/web",

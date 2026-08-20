@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ApiError, fail, jsonBody, ok } from "@/server/api";
 import { createSessionToken } from "@/server/auth";
 import { audit } from "@/server/audit";
+import { signedMemberAvatarUrl } from "@/server/avatar";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
 import { writablePlatformSettings } from "@/server/quota";
@@ -12,7 +13,6 @@ import { enforceRateLimit } from "@/server/rate-limit";
 const schema = z.object({
   wx_code: z.string().min(1),
   nickname: z.string().trim().min(1).max(64).optional(),
-  avatar_url: z.url().optional(),
   open_id: z.string().optional(),
   openId: z.string().optional(),
 });
@@ -25,23 +25,48 @@ async function exchangeWechat(code: string, openIdHint?: string) {
       unionId: null,
     };
   }
-  if (!env.wechatAppId || !env.wechatAppSecret) throw new Error("微信登录参数未配置");
+  if (!env.wechatAppId || !env.wechatAppSecret) {
+    console.error("WeChat jscode2session failed", { errcode: null, rid: null });
+    throw new ApiError(503, "微信登录配置异常，请联系管理员", "WECHAT_CONFIGURATION_ERROR");
+  }
   const query = new URLSearchParams({
     appid: env.wechatAppId,
     secret: env.wechatAppSecret,
     js_code: code,
     grant_type: "authorization_code",
   });
-  const response = await fetch(`https://api.weixin.qq.com/sns/jscode2session?${query}`, {
-    cache: "no-store",
-  });
-  const data = (await response.json()) as {
+  let response: Response;
+  let data: {
     openid?: string;
     unionid?: string;
     errcode?: number;
     errmsg?: string;
+    rid?: string;
   };
-  if (!response.ok || !data.openid) throw new Error(data.errmsg || "微信登录失败");
+
+  try {
+    response = await fetch(`https://api.weixin.qq.com/sns/jscode2session?${query}`, {
+      cache: "no-store",
+    });
+    const payload = await response.json() as unknown;
+    data = payload && typeof payload === "object" ? payload as typeof data : {};
+  } catch {
+    console.error("WeChat jscode2session failed", { errcode: null, rid: null });
+    throw new ApiError(503, "微信服务暂时不可用，请稍后重试", "WECHAT_UPSTREAM_UNAVAILABLE");
+  }
+
+  if (!response.ok || !data.openid) {
+    const errcode = typeof data.errcode === "number" ? data.errcode : null;
+    const rid = data.rid || /\brid:\s*([^\s,]+)/i.exec(data.errmsg || "")?.[1] || null;
+    console.error("WeChat jscode2session failed", { errcode, rid });
+    if (errcode === 40029) {
+      throw new ApiError(401, "微信登录凭证已失效，请重试", "WECHAT_CODE_INVALID");
+    }
+    if (errcode === 40125 || errcode === 40164) {
+      throw new ApiError(503, "微信登录配置异常，请联系管理员", "WECHAT_CONFIGURATION_ERROR");
+    }
+    throw new ApiError(503, "微信服务暂时不可用，请稍后重试", "WECHAT_UPSTREAM_UNAVAILABLE");
+  }
   return { openId: data.openid, unionId: data.unionid || null };
 }
 
@@ -75,23 +100,22 @@ export async function POST(request: NextRequest) {
 
       if (existing) {
         db.prepare(
-          `UPDATE users SET nickname = COALESCE(?, nickname), avatar_url = COALESCE(?, avatar_url),
+          `UPDATE users SET nickname = COALESCE(?, nickname),
            union_id = COALESCE(?, union_id), last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        ).run(input.nickname || null, input.avatar_url || null, profile.unionId, existing.id);
+        ).run(input.nickname || null, profile.unionId, existing.id);
         return existing.id;
       }
 
       writablePlatformSettings();
       const newUserId = randomUUID();
       const inserted = db.prepare(
-        `INSERT OR IGNORE INTO users (id, open_id, union_id, nickname, avatar_url)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT OR IGNORE INTO users (id, open_id, union_id, nickname)
+         VALUES (?, ?, ?, ?)`,
       ).run(
         newUserId,
         profile.openId,
         profile.unionId,
         input.nickname || "微信用户",
-        input.avatar_url || null,
       );
 
       if (!inserted.changes) {
@@ -102,9 +126,9 @@ export async function POST(request: NextRequest) {
           throw new ApiError(403, "账号已被停用，请联系管理员", "USER_DISABLED");
         }
         db.prepare(
-          `UPDATE users SET nickname = COALESCE(?, nickname), avatar_url = COALESCE(?, avatar_url),
+          `UPDATE users SET nickname = COALESCE(?, nickname),
            union_id = COALESCE(?, union_id), last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        ).run(input.nickname || null, input.avatar_url || null, profile.unionId, existing.id);
+        ).run(input.nickname || null, profile.unionId, existing.id);
         return existing.id;
       }
 
@@ -123,12 +147,26 @@ export async function POST(request: NextRequest) {
     });
     const userId = loginOperation.immediate();
 
-    const user = db
+    const storedUser = db
       .prepare(
         `SELECT id, open_id AS openId, nickname, avatar_url AS avatarUrl,
+         avatar_version AS avatarVersion,
          created_at AS createdAt, last_login_at AS lastLoginAt FROM users WHERE id = ?`,
       )
-      .get(userId);
+      .get(userId) as {
+        id: string;
+        openId: string;
+        nickname: string;
+        avatarUrl: string | null;
+        avatarVersion: number;
+        createdAt: string;
+        lastLoginAt: string;
+      };
+    const { avatarVersion, ...publicUser } = storedUser;
+    const user = {
+      ...publicUser,
+      avatarUrl: signedMemberAvatarUrl(storedUser.id, avatarVersion, storedUser.avatarUrl),
+    };
     const teams = db
       .prepare(
         `SELECT t.id AS teamId, t.name, t.slug, tm.role, t.owner_id AS ownerId,

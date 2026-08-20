@@ -29,7 +29,85 @@ const DEFAULT_PROFILE = {
   nickname: 'CodePool 用户',
   avatarUrl: '/assets/avatar-default.png',
   avatar_url: '/assets/avatar-default.png',
+  pendingAvatar: false,
 };
+
+const MAX_AVATAR_BYTES = 512 * 1024;
+
+function isLocalAvatar(url) {
+  return typeof url === 'string'
+    && Boolean(url.trim())
+    && !/^https:\/\//i.test(url)
+    && url.indexOf('/assets/') !== 0;
+}
+
+function compressAvatar(filePath) {
+  if (typeof wx.compressImage !== 'function') return Promise.resolve(filePath);
+  return new Promise((resolve) => {
+    wx.compressImage({
+      src: filePath,
+      quality: 68,
+      compressedWidth: 512,
+      compressedHeight: 512,
+      success: ({ tempFilePath }) => resolve(tempFilePath || filePath),
+      fail: () => resolve(filePath),
+    });
+  });
+}
+
+function readAvatar(filePath) {
+  return new Promise((resolve, reject) => {
+    const fileSystem = wx.getFileSystemManager();
+    const readFile = () => fileSystem.readFile({
+      filePath,
+      encoding: 'base64',
+      success: ({ data }) => {
+        const base64 = typeof data === 'string' ? data : '';
+        const padding = base64.endsWith('==') ? 2 : (base64.endsWith('=') ? 1 : 0);
+        const byteLength = Math.floor((base64.length * 3) / 4) - padding;
+        if (!base64 || byteLength <= 0) {
+          reject(new Error('头像文件读取失败'));
+          return;
+        }
+        if (byteLength > MAX_AVATAR_BYTES) {
+          const error = new Error('头像压缩后仍超过 512KB，请选择更小的图片');
+          error.code = 'AVATAR_TOO_LARGE';
+          reject(error);
+          return;
+        }
+        let mimeType = '';
+        if (base64.indexOf('/9j/') === 0) mimeType = 'image/jpeg';
+        else if (base64.indexOf('iVBORw0KGgo') === 0) mimeType = 'image/png';
+        else if (base64.indexOf('UklGR') === 0) mimeType = 'image/webp';
+        if (!mimeType) {
+          const error = new Error('仅支持 JPEG、PNG 或 WebP 头像');
+          error.code = 'AVATAR_FORMAT_UNSUPPORTED';
+          reject(error);
+          return;
+        }
+        resolve({ data: base64, mimeType });
+      },
+      fail: () => reject(new Error('头像文件读取失败，请重新选择')),
+    });
+    if (typeof fileSystem.getFileInfo !== 'function') {
+      readFile();
+      return;
+    }
+    fileSystem.getFileInfo({
+      filePath,
+      success: ({ size }) => {
+        if (Number(size) > MAX_AVATAR_BYTES) {
+          const error = new Error('头像压缩后仍超过 512KB，请选择更小的图片');
+          error.code = 'AVATAR_TOO_LARGE';
+          reject(error);
+          return;
+        }
+        readFile();
+      },
+      fail: () => reject(new Error('头像文件读取失败，请重新选择')),
+    });
+  });
+}
 
 function normalizeInviteToken(options) {
   const query = options && options.query ? options.query : (options || {});
@@ -145,7 +223,7 @@ App({
     return this._restoring;
   },
 
-  async refreshMe() {
+  async refreshMe(options = {}) {
     const me = await api.fetchMe();
     const teams = Array.isArray(me.teams) ? me.teams : [];
     this.globalData.user = me.user || null;
@@ -154,13 +232,20 @@ App({
     this.setActiveTeam(activeExists ? this.globalData.activeTeamId : (teams[0] ? teams[0].teamId : null));
     if (me.user) {
       const currentProfile = this.getStoredProfile();
-      const avatarUrl = me.user.avatarUrl || currentProfile.avatarUrl || DEFAULT_PROFILE.avatarUrl;
+      const localAvatar = currentProfile.avatarUrl || currentProfile.avatar_url;
+      const preservePendingAvatar = Boolean(
+        options.preserveLocalAvatar && currentProfile.pendingAvatar && isLocalAvatar(localAvatar),
+      );
+      const avatarUrl = preservePendingAvatar
+        ? localAvatar
+        : (me.user.avatarUrl || DEFAULT_PROFILE.avatarUrl);
       this.setStoredProfile({
         openId: me.user.openId,
         open_id: me.user.openId,
         nickname: me.user.nickname,
         avatarUrl,
         avatar_url: avatarUrl,
+        pendingAvatar: preservePendingAvatar,
       });
     }
     return me;
@@ -184,7 +269,12 @@ App({
       api.setToken(result.token);
       this.globalData.token = result.token;
       this.globalData.user = result.user || null;
-      await this.refreshMe();
+      await this.refreshMe({ preserveLocalAvatar: true });
+      try {
+        await this.syncStoredProfile({ updateNickname: false });
+      } catch (error) {
+        wx.showToast({ title: error.message || '已登录，个人资料同步失败', icon: 'none' });
+      }
       await this.consumePendingInvite();
       return result.token;
     })();
@@ -193,6 +283,41 @@ App({
     } finally {
       this._loginPromise = null;
     }
+  },
+
+  async syncStoredProfile(options = {}) {
+    if (!this.globalData.token) {
+      const error = new Error('请先登录后再保存资料');
+      error.code = 'UNAUTHORIZED';
+      throw error;
+    }
+    if (this._profileSyncPromise) return this._profileSyncPromise;
+    const profile = this.getStoredProfile();
+    const nickname = (profile.nickname || '').trim();
+    const avatarUrl = profile.avatarUrl || profile.avatar_url || '';
+    const hasPendingAvatar = Boolean(profile.pendingAvatar && isLocalAvatar(avatarUrl));
+    this._profileSyncPromise = (async () => {
+      try {
+        const update = {};
+        if (options.updateNickname !== false) update.nickname = nickname;
+        if (hasPendingAvatar) {
+          const compressedPath = await compressAvatar(avatarUrl);
+          update.avatar = await readAvatar(compressedPath);
+        }
+        if (Object.keys(update).length) await api.updateProfile(update);
+        return await this.refreshMe();
+      } catch (error) {
+        await this.refreshMe().catch(() => undefined);
+        this.setStoredProfile({
+          nickname: profile.nickname,
+          ...(hasPendingAvatar ? { avatarUrl, avatar_url: avatarUrl, pendingAvatar: true } : {}),
+        });
+        throw error;
+      } finally {
+        this._profileSyncPromise = null;
+      }
+    })();
+    return this._profileSyncPromise;
   },
 
   setActiveTeam(teamId) {
@@ -404,6 +529,7 @@ App({
       nickname,
       avatarUrl: avatar,
       avatar_url: avatar,
+      pendingAvatar: stored.pendingAvatar === true || isLocalAvatar(avatar),
     };
     wx.setStorageSync(STORAGE.PROFILE, profile);
     return profile;

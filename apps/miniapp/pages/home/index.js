@@ -32,6 +32,8 @@ Page({
     offline: false,
     needsLogin: false,
     loginLoading: false,
+    nicknameReviewPending: false,
+    nicknameReviewInFlight: false,
     loginProfile: defaultProfile(),
     legalConsent: app.hasLegalConsent ? app.hasLegalConsent() : false,
     teams: [],
@@ -52,6 +54,7 @@ Page({
 
   onLoad(options) {
     app.captureInvite(options);
+    this._approvedNickname = this.data.loginProfile.nickname;
     this._codeRefreshing = {};
     this._hideTimers = {};
     this._networkHandler = ({ isConnected }) => {
@@ -95,6 +98,8 @@ Page({
     const hasSession = await app.awaitReady();
     if (!hasSession) {
       this.clearTicker();
+      const loginProfile = defaultProfile();
+      this._approvedNickname = loginProfile.nickname;
       this.setData({
         loading: false,
         needsLogin: true,
@@ -103,7 +108,9 @@ Page({
         vaultItems: [],
         visibleAccounts: [],
         visibleVaultItems: [],
-        loginProfile: defaultProfile(),
+        loginProfile,
+        nicknameReviewPending: false,
+        nicknameReviewInFlight: false,
         legalConsent: app.hasLegalConsent ? app.hasLegalConsent() : false,
       });
       return;
@@ -249,6 +256,10 @@ Page({
 
   async handleLogin() {
     if (this.data.loginLoading) return;
+    if (this.data.nicknameReviewPending) {
+      wx.showToast({ title: '请等待昵称安全审核完成', icon: 'none' });
+      return;
+    }
     if (!this.data.legalConsent) {
       wx.showToast({ title: '请先勾选同意隐私政策和用户协议', icon: 'none' });
       return;
@@ -268,14 +279,50 @@ Page({
   },
 
   handleNicknameInput(e) {
-    this.setData({ 'loginProfile.nickname': e.detail.value });
+    const nickname = e.detail.value;
+    this.setData({
+      'loginProfile.nickname': nickname,
+      nicknameReviewPending: nickname.trim() !== String(this._approvedNickname || '').trim(),
+    });
+  },
+
+  handleNicknameBlur() {
+    const nickname = this.data.loginProfile.nickname;
+    if (nickname.trim() === String(this._approvedNickname || '').trim()) {
+      this.setData({ nicknameReviewPending: false, nicknameReviewInFlight: false });
+      return;
+    }
+    this._reviewedNickname = nickname;
+    this.setData({ nicknameReviewPending: true, nicknameReviewInFlight: true });
+  },
+
+  handleNicknameReview(e) {
+    const reviewedNickname = this._reviewedNickname;
+    if (!reviewedNickname || reviewedNickname !== this.data.loginProfile.nickname) {
+      this.setData({ nicknameReviewInFlight: false });
+      return;
+    }
+    if (e.detail && e.detail.pass === true) {
+      this._approvedNickname = reviewedNickname;
+      this._reviewedNickname = '';
+      this.setData({ nicknameReviewPending: false, nicknameReviewInFlight: false });
+      return;
+    }
+    const nickname = this._approvedNickname || defaultProfile().nickname;
+    this._reviewedNickname = '';
+    this.setData({ 'loginProfile.nickname': nickname, nicknameReviewPending: false, nicknameReviewInFlight: false });
+    wx.showToast({ title: e.detail && e.detail.timeout ? '昵称审核超时，请重新输入' : '昵称未通过微信安全审核', icon: 'none' });
   },
 
   handleChooseAvatar(e) {
     const avatarUrl = e.detail && e.detail.avatarUrl;
     if (!avatarUrl) return;
-    const profile = app.setStoredProfile({ avatarUrl, avatar_url: avatarUrl });
-    this.setData({ loginProfile: profile });
+    app.setStoredProfile({ avatarUrl, avatar_url: avatarUrl, pendingAvatar: true });
+    this.setData({
+      'loginProfile.avatarUrl': avatarUrl,
+      'loginProfile.avatar_url': avatarUrl,
+      'loginProfile.pendingAvatar': true,
+    });
   },
 
   handleLegalConsent(e) {
