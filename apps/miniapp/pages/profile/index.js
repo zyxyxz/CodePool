@@ -18,6 +18,7 @@ Page({
     needsLogin: false,
     loginLoading: false,
     saving: false,
+    avatarProcessing: false,
     nicknameReviewPending: false,
     nicknameReviewInFlight: false,
     user: null,
@@ -156,29 +157,49 @@ Page({
     wx.showToast({ title: e.detail && e.detail.timeout ? '昵称审核超时，请重新输入' : '昵称未通过微信安全审核', icon: 'none' });
   },
 
-  handleChooseAvatar(e) {
-    const tempFilePath = e.detail && e.detail.avatarUrl;
-    if (!tempFilePath) return;
-    const fileSystem = wx.getFileSystemManager();
-    fileSystem.saveFile({
-      tempFilePath,
-      success: ({ savedFilePath }) => {
-        app.setStoredProfile({ avatarUrl: savedFilePath, avatar_url: savedFilePath, pendingAvatar: true });
-        this.setData({
-          'profile.avatarUrl': savedFilePath,
-          'profile.avatar_url': savedFilePath,
-          'profile.pendingAvatar': true,
-        });
-      },
-      fail: () => {
-        app.setStoredProfile({ avatarUrl: tempFilePath, avatar_url: tempFilePath, pendingAvatar: true });
-        this.setData({
-          'profile.avatarUrl': tempFilePath,
-          'profile.avatar_url': tempFilePath,
-          'profile.pendingAvatar': true,
-        });
-      },
+  async commitChosenAvatar(tempFilePath) {
+    const avatarUrl = await app.persistAvatarFile(tempFilePath);
+    app.setStoredProfile({ avatarUrl, avatar_url: avatarUrl, pendingAvatar: true });
+    this.setData({
+      'profile.avatarUrl': avatarUrl,
+      'profile.avatar_url': avatarUrl,
+      'profile.pendingAvatar': true,
     });
+    if (!app.globalData.token) return;
+    await app.syncStoredProfile({ updateNickname: false });
+    const syncedProfile = app.getStoredProfile();
+    this.setData({
+      'profile.avatarUrl': syncedProfile.avatarUrl,
+      'profile.avatar_url': syncedProfile.avatar_url,
+      'profile.pendingAvatar': false,
+    });
+    wx.showToast({ title: '头像已更新', icon: 'success' });
+  },
+
+  async handleChooseAvatar(e) {
+    const tempFilePath = e.detail && e.detail.avatarUrl;
+    if (!tempFilePath || this.data.avatarProcessing) return;
+    this.setData({ avatarProcessing: true });
+    try {
+      await this.commitChosenAvatar(tempFilePath);
+    } catch (error) {
+      wx.showToast({ title: friendlyError(error, '头像更新失败'), icon: 'none' });
+    } finally {
+      this.setData({ avatarProcessing: false });
+    }
+  },
+
+  async handleChooseAvatarFallback() {
+    if (this.data.avatarProcessing) return;
+    this.setData({ avatarProcessing: true });
+    try {
+      const tempFilePath = await app.chooseAvatarImage();
+      if (tempFilePath) await this.commitChosenAvatar(tempFilePath);
+    } catch (error) {
+      wx.showToast({ title: friendlyError(error, '头像选择失败'), icon: 'none' });
+    } finally {
+      this.setData({ avatarProcessing: false });
+    }
   },
 
   handleLegalConsent(e) {
@@ -188,7 +209,7 @@ Page({
   },
 
   async handleLogin() {
-    if (this.data.loginLoading) return;
+    if (this.data.loginLoading || this.data.avatarProcessing) return;
     if (this.data.nicknameReviewPending) {
       wx.showToast({ title: '请等待昵称安全审核完成', icon: 'none' });
       return;
@@ -211,7 +232,7 @@ Page({
   },
 
   async handleSaveProfile() {
-    if (this.data.saving) return;
+    if (this.data.saving || this.data.avatarProcessing) return;
     if (this.data.nicknameReviewPending) {
       wx.showToast({ title: '请等待昵称安全审核完成', icon: 'none' });
       return;

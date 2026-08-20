@@ -14,8 +14,13 @@ function walk(directory) {
 walk(root);
 
 for (const file of files.filter((item) => item.endsWith(".json"))) JSON.parse(fs.readFileSync(file, "utf8"));
-for (const file of files.filter((item) => item.endsWith(".js"))) {
+for (const file of files.filter((item) => item.endsWith(".js") || item.endsWith(".cjs"))) {
   const result = spawnSync(process.execPath, ["--check", file], { encoding: "utf8" });
   if (result.status !== 0) throw new Error(result.stderr || `Syntax check failed: ${file}`);
+}
+const testFiles = files.filter((item) => item.endsWith(".test.cjs"));
+if (testFiles.length) {
+  const result = spawnSync(process.execPath, ["--test", ...testFiles], { encoding: "utf8" });
+  if (result.status !== 0) throw new Error(result.stdout || result.stderr || "Miniapp tests failed");
 }
 process.stdout.write(`Miniapp static check passed (${files.length} files).\n`);

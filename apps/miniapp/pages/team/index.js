@@ -22,6 +22,7 @@ Page({
     offline: false,
     needsLogin: false,
     loginLoading: false,
+    avatarProcessing: false,
     nicknameReviewPending: false,
     nicknameReviewInFlight: false,
     loginProfile: defaultProfile(),
@@ -400,15 +401,40 @@ Page({
     wx.showToast({ title: e.detail && e.detail.timeout ? '昵称审核超时，请重新输入' : '昵称未通过微信安全审核', icon: 'none' });
   },
 
-  handleChooseAvatar(e) {
-    const avatarUrl = e.detail && e.detail.avatarUrl;
-    if (!avatarUrl) return;
+  async storeChosenAvatar(tempFilePath) {
+    const avatarUrl = await app.persistAvatarFile(tempFilePath);
     app.setStoredProfile({ avatarUrl, avatar_url: avatarUrl, pendingAvatar: true });
     this.setData({
       'loginProfile.avatarUrl': avatarUrl,
       'loginProfile.avatar_url': avatarUrl,
       'loginProfile.pendingAvatar': true,
     });
+  },
+
+  async handleChooseAvatar(e) {
+    const tempFilePath = e.detail && e.detail.avatarUrl;
+    if (!tempFilePath || this.data.avatarProcessing) return;
+    this.setData({ avatarProcessing: true });
+    try {
+      await this.storeChosenAvatar(tempFilePath);
+    } catch (error) {
+      wx.showToast({ title: friendlyError(error, '头像选择失败'), icon: 'none' });
+    } finally {
+      this.setData({ avatarProcessing: false });
+    }
+  },
+
+  async handleChooseAvatarFallback() {
+    if (this.data.avatarProcessing) return;
+    this.setData({ avatarProcessing: true });
+    try {
+      const tempFilePath = await app.chooseAvatarImage();
+      if (tempFilePath) await this.storeChosenAvatar(tempFilePath);
+    } catch (error) {
+      wx.showToast({ title: friendlyError(error, '头像选择失败'), icon: 'none' });
+    } finally {
+      this.setData({ avatarProcessing: false });
+    }
   },
 
   handleLegalConsent(e) {

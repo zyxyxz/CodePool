@@ -362,10 +362,56 @@ App({
           }
           wx.requirePrivacyAuthorize({
             success: () => resolve(true),
-            fail: () => reject(new Error('需要同意微信隐私保护指引后才能登录')),
+            fail: () => reject(new Error('需要同意微信隐私保护指引后才能继续使用')),
           });
         },
         fail: () => resolve(true),
+      });
+    });
+  },
+
+  chooseAvatarImage() {
+    return this.requestPrivacyAuthorization().then(() => new Promise((resolve, reject) => {
+      const fail = (error) => {
+        const message = error && error.errMsg ? error.errMsg : '';
+        if (/cancel/i.test(message)) {
+          resolve('');
+          return;
+        }
+        reject(new Error('无法打开相册或相机，请检查微信隐私权限'));
+      };
+      if (typeof wx.chooseMedia === 'function') {
+        wx.chooseMedia({
+          count: 1,
+          mediaType: ['image'],
+          sourceType: ['album', 'camera'],
+          sizeType: ['compressed'],
+          success: ({ tempFiles }) => resolve(tempFiles && tempFiles[0] ? tempFiles[0].tempFilePath : ''),
+          fail,
+        });
+        return;
+      }
+      if (typeof wx.chooseImage === 'function') {
+        wx.chooseImage({
+          count: 1,
+          sourceType: ['album', 'camera'],
+          sizeType: ['compressed'],
+          success: ({ tempFilePaths }) => resolve(tempFilePaths && tempFilePaths[0] ? tempFilePaths[0] : ''),
+          fail,
+        });
+        return;
+      }
+      reject(new Error('当前微信版本不支持选择头像，请升级微信后重试'));
+    }));
+  },
+
+  persistAvatarFile(tempFilePath) {
+    return new Promise((resolve) => {
+      const fileSystem = wx.getFileSystemManager();
+      fileSystem.saveFile({
+        tempFilePath,
+        success: ({ savedFilePath }) => resolve(savedFilePath || tempFilePath),
+        fail: () => resolve(tempFilePath),
       });
     });
   },

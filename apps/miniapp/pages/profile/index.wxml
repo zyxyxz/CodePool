@@ -10,21 +10,27 @@
   <view class="card login-card" wx:elif="{{needsLogin}}">
     <text class="login-title">登录后同步团队</text>
     <text class="login-desc">无需提供手机号；微信身份仅用于识别成员和保障安全审计。</text>
-    <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{loginLoading}}"><image src="{{profile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" /><text>更换头像</text></button>
-    <input class="input nickname-input" type="nickname" maxlength="64" value="{{profile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || nicknameReviewInFlight}}" bindinput="handleNicknameInput" bindblur="handleNicknameBlur" bindnicknamereview="handleNicknameReview" />
+    <view class="avatar-picker">
+      <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{loginLoading || avatarProcessing}}"><image src="{{profile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" /><text>{{avatarProcessing ? '处理中' : '使用微信头像'}}</text></button>
+      <button class="avatar-alternate" disabled="{{loginLoading || avatarProcessing}}" bindtap="handleChooseAvatarFallback">相册 / 相机</button>
+    </view>
+    <input class="input nickname-input" type="nickname" maxlength="64" value="{{profile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || avatarProcessing || nicknameReviewInFlight}}" bindinput="handleNicknameInput" bindblur="handleNicknameBlur" bindnicknamereview="handleNicknameReview" />
     <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="#15803D" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
-    <button class="button-primary" loading="{{loginLoading}}" disabled="{{loginLoading || !legalConsent}}" bindtap="handleLogin">微信快捷登录</button>
+    <button class="button-primary" loading="{{loginLoading}}" disabled="{{loginLoading || avatarProcessing || !legalConsent}}" bindtap="handleLogin">微信快捷登录</button>
   </view>
 
   <block wx:else>
     <view class="account-card">
-      <button class="avatar-button signed" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{saving}}"><image src="{{profile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" /><text>更换头像</text></button>
+      <view class="avatar-picker signed-picker">
+        <button class="avatar-button signed" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{saving || avatarProcessing}}"><image src="{{profile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" /><text>{{avatarProcessing ? '上传中' : '微信头像'}}</text></button>
+        <button class="avatar-alternate" disabled="{{saving || avatarProcessing}}" bindtap="handleChooseAvatarFallback">相册</button>
+      </view>
       <view class="account-info">
-        <input class="nickname-edit" type="nickname" maxlength="64" value="{{profile.nickname}}" disabled="{{saving || nicknameReviewInFlight}}" bindinput="handleNicknameInput" bindblur="handleNicknameBlur" bindnicknamereview="handleNicknameReview" />
+        <input class="nickname-edit" type="nickname" maxlength="64" value="{{profile.nickname}}" disabled="{{saving || avatarProcessing || nicknameReviewInFlight}}" bindinput="handleNicknameInput" bindblur="handleNicknameBlur" bindnicknamereview="handleNicknameReview" />
         <text class="user-id" bindtap="handleCopyUserId">成员编号 {{userIdMasked}} · 点击复制</text>
         <text class="joined">{{joinedText}} 加入 · {{teams.length}} 个团队</text>
       </view>
-      <button class="save-profile" loading="{{saving}}" disabled="{{saving}}" bindtap="handleSaveProfile">保存</button>
+      <button class="save-profile" loading="{{saving}}" disabled="{{saving || avatarProcessing}}" bindtap="handleSaveProfile">保存</button>
     </view>
 
     <view class="section-label">安全与隐私</view>

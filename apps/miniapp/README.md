@@ -5,14 +5,14 @@
 ## 生产配置
 
 - API 默认地址：`https://codepool.apps.aisp24.com`
-- 微信公众平台的 `request` 合法域名必须包含 `https://codepool.apps.aisp24.com`
+- 微信公众平台的 `request` 与 `downloadFile` 合法域名必须包含 `https://codepool.apps.aisp24.com`
 - 服务端必须配置与本项目 AppID 匹配的 `WECHAT_APP_ID`、`WECHAT_APP_SECRET`
 - 正式体验版和正式版必须保持“合法域名校验”开启
 - 本地联调覆盖值 `CODEPOOL_API_BASE_URL` 只用于开发者工具，提审前需要清除
 
 ## 提审前阻塞清单
 
-1. 在小程序后台配置真实运营主体、隐私保护指引和用户信息处理清单。
+1. 在小程序后台配置真实运营主体、隐私保护指引和用户信息处理清单，至少声明微信头像、昵称以及选中的照片信息。
 2. 配置服务端 `CODEPOOL_OPERATOR_NAME` 与客服邮箱；小程序法律页会动态下发主体信息，随后完成法务审核。
 3. 验证个人页的账号注销申请、撤回及后台运营处理闭环。
 4. 配置服务端微信登录参数，并分别使用开发版、体验版和正式版 AppID 验证登录。

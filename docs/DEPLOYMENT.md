@@ -96,8 +96,8 @@ npm run db:verify-backup -- /absolute/path/to/codepool-xxx.cpbak
 
 ## 微信小程序上线
 
-1. 在微信公众平台添加 `https://codepool.apps.aisp24.com` 为 request 合法域名。
+1. 在微信公众平台添加 `https://codepool.apps.aisp24.com` 为 request 与 downloadFile 合法域名。
 2. 配置与 `project.config.json` AppID 对应的 AppSecret。
-3. 完成微信隐私保护指引、用户协议、服务类目与小程序备案。
+3. 完成微信隐私保护指引、用户协议、服务类目与小程序备案；隐私信息清单需包含微信头像、昵称和选中的照片信息。
 4. 使用体验版真机完成“登录 → 建团队 → 添加 → 按需读取 → 分享领取 → 注销申请”。
 5. 保持 `WECHAT_MOCK_LOGIN=false`，再提交审核与发布。

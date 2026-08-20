@@ -6,16 +6,20 @@
 .login-card { padding: 44rpx 36rpx; text-align: center; }
 .login-title { font-size: 36rpx; font-weight: 720; }
 .login-desc { margin: 14rpx auto 28rpx; color: #718078; font-size: 24rpx; line-height: 1.6; }
-.avatar-button { width: 180rpx; margin: 0 auto 20rpx; padding: 0; display: flex; flex-direction: column; gap: 8rpx; background: transparent; color: #718078; font-size: 22rpx; }
+.avatar-picker { width: 190rpx; margin: 0 auto 20rpx; }
+.avatar-button { width: 180rpx; margin: 0 auto; padding: 0; display: flex; flex-direction: column; gap: 8rpx; background: transparent; color: #718078; font-size: 22rpx; }
 .avatar-button image { width: 108rpx; height: 108rpx; border-radius: 50%; background: #edf2ef; }
+.avatar-alternate { width: 100%; min-height: 46rpx; margin-top: 4rpx; padding: 4rpx; background: transparent; color: #15803d; font-size: 19rpx; }
 .nickname-input { margin-bottom: 18rpx; text-align: center; }
 .consent-row { margin: 18rpx 0; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6rpx; color: #66736b; font-size: 22rpx; }
 .consent-row label { display: flex; align-items: center; }
 .consent-row checkbox { transform: scale(.72); }
 .legal-link { color: #15803d; }
 .account-card { padding: 30rpx; display: flex; align-items: center; gap: 20rpx; border-radius: 30rpx; background: #101820; color: #fff; }
-.avatar-button.signed { width: 96rpx; margin: 0; flex: none; color: #aeb9b2; font-size: 18rpx; }
+.signed-picker { width: 112rpx; margin: 0; flex: none; }
+.avatar-button.signed { width: 96rpx; margin: 0 auto; color: #aeb9b2; font-size: 18rpx; }
 .avatar-button.signed image { width: 88rpx; height: 88rpx; }
+.signed-picker .avatar-alternate { color: #7ce79d; font-size: 18rpx; }
 .account-info { min-width: 0; flex: 1; }
 .nickname-edit { height: 58rpx; color: #fff; font-size: 32rpx; font-weight: 680; }
 .user-id,.joined { margin-top: 6rpx; overflow: hidden; color: #9eaaa3; font-size: 20rpx; text-overflow: ellipsis; white-space: nowrap; }

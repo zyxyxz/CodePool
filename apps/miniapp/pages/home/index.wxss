@@ -44,9 +44,14 @@
   line-height: 1.65;
 }
 
+.avatar-picker {
+  width: 190rpx;
+  margin: 0 auto 24rpx;
+}
+
 .avatar-button {
   width: 180rpx;
-  margin: 0 auto 24rpx;
+  margin: 0 auto;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -54,6 +59,16 @@
   background: transparent;
   color: #66736b;
   font-size: 22rpx;
+}
+
+.avatar-alternate {
+  width: 100%;
+  min-height: 46rpx;
+  margin-top: 4rpx;
+  padding: 4rpx;
+  background: transparent;
+  color: #15803d;
+  font-size: 19rpx;
 }
 
 .login-avatar {
