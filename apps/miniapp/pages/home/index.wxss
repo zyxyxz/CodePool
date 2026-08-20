@@ -24,7 +24,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 28rpx;
+  border-radius: 16rpx;
   background: #101820;
   color: #7ce79d;
   font-size: 34rpx;
@@ -111,20 +111,30 @@
   color: #15803d;
 }
 
-.privacy-copy {
+.login-context {
   margin-top: 24rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #e7eee9;
   color: #89958e;
   font-size: 21rpx;
   line-height: 1.55;
 }
 
+.login-context text {
+  display: block;
+}
+
+.login-context text + text {
+  margin-top: 5rpx;
+}
+
 .hero-card {
   overflow: hidden;
   margin-bottom: 20rpx;
-  border-radius: 32rpx;
+  border-radius: 16rpx;
   background: #101820;
   color: #ffffff;
-  box-shadow: 0 18rpx 48rpx rgba(16, 24, 32, 0.18);
+  box-shadow: 0 12rpx 32rpx rgba(16, 24, 32, 0.14);
 }
 
 .hero-top {
@@ -135,17 +145,23 @@
   gap: 20rpx;
 }
 
+.hero-top > view:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .eyebrow {
   color: #7ce79d;
   font-size: 20rpx;
   font-weight: 700;
-  letter-spacing: 3rpx;
+  letter-spacing: 0;
 }
 
 .hero-title {
   margin-top: 10rpx;
   font-size: 40rpx;
   font-weight: 750;
+  word-break: break-all;
 }
 
 .hero-subtitle {
@@ -154,13 +170,32 @@
   font-size: 24rpx;
 }
 
-.refresh-button {
+.hero-tools {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 12rpx;
+}
+
+.hero-tool {
+  width: 68rpx;
+  min-width: 68rpx;
+  height: 68rpx;
   min-height: 68rpx;
-  padding: 12rpx 22rpx;
-  border-radius: 18rpx;
+  padding: 0;
+  border-radius: 12rpx;
   background: #26332c;
   color: #dce8df;
-  font-size: 23rpx;
+  font-size: 34rpx;
+  line-height: 68rpx;
+}
+
+.hero-tool-primary {
+  background: #15803d;
+  color: #ffffff;
+}
+
+.hero-tool-primary.maintenance {
+  background: #765000;
 }
 
 .team-picker {
@@ -172,9 +207,17 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.team-picker > view:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .team-name,
 .team-meta {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .team-name {
@@ -189,6 +232,8 @@
 }
 
 .picker-arrow {
+  flex: 0 0 auto;
+  margin-left: 20rpx;
   color: #7ce79d;
   font-size: 23rpx;
 }
@@ -202,7 +247,7 @@
   margin-bottom: 20rpx;
   padding: 22rpx 26rpx;
   border: 1rpx solid #cfe4d5;
-  border-radius: 22rpx;
+  border-radius: 12rpx;
   background: #edf8f0;
   color: #385643;
 }
@@ -233,7 +278,7 @@
   height: 92rpx;
   padding: 0 116rpx 0 28rpx;
   border: 1rpx solid #dae5de;
-  border-radius: 24rpx;
+  border-radius: 14rpx;
   background: #ffffff;
 }
 
@@ -377,7 +422,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 38rpx;
   font-weight: 750;
-  letter-spacing: 4rpx;
+  letter-spacing: 0;
 }
 
 .totp-code.revealed {
@@ -406,7 +451,7 @@
 .mini-action {
   min-height: 68rpx;
   padding: 12rpx 22rpx;
-  border-radius: 16rpx;
+  border-radius: 12rpx;
   background: #f0f4f1;
   color: #536058;
   font-size: 23rpx;
@@ -444,27 +489,6 @@
   color: #15803d;
 }
 
-.add-button {
-  position: fixed;
-  right: 28rpx;
-  bottom: calc(36rpx + env(safe-area-inset-bottom));
-  z-index: 10;
-  min-width: 190rpx;
-  min-height: 88rpx;
-  padding: 20rpx 30rpx;
-  border-radius: 999rpx;
-  background: #15803d;
-  color: #ffffff;
-  font-size: 27rpx;
-  font-weight: 700;
-  box-shadow: 0 16rpx 36rpx rgba(21, 128, 61, 0.28);
-}
-
-.add-button.disabled {
-  background: #765000;
-  box-shadow: 0 16rpx 36rpx rgba(118, 80, 0, 0.2);
-}
-
 .loading-dot {
-  letter-spacing: 8rpx;
+  letter-spacing: 0;
 }

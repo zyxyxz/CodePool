@@ -1,6 +1,6 @@
 .legal-header { padding: 12rpx 8rpx 30rpx; }
 .legal-header text,.body { display: block; }
-.eyebrow { color: #15803d; font-size: 20rpx; font-weight: 750; letter-spacing: 3rpx; }
+.eyebrow { color: #15803d; font-size: 20rpx; font-weight: 750; letter-spacing: 0; }
 .title { margin-top: 10rpx; font-size: 44rpx; font-weight: 750; }
 .version { margin-top: 10rpx; color: #89958e; font-size: 22rpx; }
 .warning { margin-bottom: 20rpx; padding: 24rpx; border: 1rpx solid #f0d396; border-radius: 20rpx; background: #fff7e6; color: #765000; font-size: 23rpx; line-height: 1.65; }

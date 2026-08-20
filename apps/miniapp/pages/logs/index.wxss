@@ -1,10 +1,10 @@
 .offline-bar { margin: -28rpx -28rpx 20rpx; padding: 16rpx; background: #fff4dc; color: #7a4d00; text-align: center; font-size: 23rpx; }
-.audit-header { padding: 10rpx 6rpx 30rpx; }
+.audit-header { padding: 6rpx 4rpx 28rpx; }
 .audit-header text,.team-picker text { display: block; }
-.eyebrow { color: #15803d; font-size: 20rpx; font-weight: 750; letter-spacing: 3rpx; }
+.eyebrow { color: #15803d; font-size: 20rpx; font-weight: 750; letter-spacing: 0; }
 .page-title { margin-top: 10rpx; font-size: 42rpx; font-weight: 750; }
 .page-desc { margin-top: 8rpx; color: #718078; font-size: 23rpx; line-height: 1.55; }
-.team-picker { padding: 26rpx 28rpx; display: flex; align-items: center; justify-content: space-between; border-radius: 24rpx; background: #101820; color: #fff; }
+.team-picker { padding: 26rpx 28rpx; display: flex; align-items: center; justify-content: space-between; border-radius: 16rpx; background: #101820; color: #fff; }
 .team-picker view text:first-child { color: #9eaaa3; font-size: 20rpx; }
 .team-picker view text:last-child { margin-top: 5rpx; font-size: 28rpx; font-weight: 650; }
 .team-picker > text { color: #7ce79d; font-size: 22rpx; }
@@ -21,7 +21,7 @@
 .dot.share { border-color: #fff0c7; background: #a66b00; }
 .dot.member { border-color: #dfe8ff; background: #4267a8; }
 .dot.auth { border-color: #e6e9e7; background: #66736b; }
-.log-card { min-width: 0; flex: 1; margin-bottom: 18rpx; padding: 24rpx; }
+.log-card { min-width: 0; flex: 1; margin-bottom: 18rpx; padding: 24rpx; box-shadow: none; }
 .log-top,.actor-row,.log-meta { display: flex; align-items: center; }
 .log-top { justify-content: space-between; gap: 20rpx; }
 .action { font-size: 28rpx; font-weight: 680; }

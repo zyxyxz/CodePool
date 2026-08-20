@@ -14,7 +14,7 @@
   color: #15803d;
   font-size: 20rpx;
   font-weight: 750;
-  letter-spacing: 3rpx;
+  letter-spacing: 0;
 }
 
 .title {
@@ -32,6 +32,10 @@
 
 .form-card {
   padding-bottom: 4rpx;
+}
+
+.intro {
+  border-bottom: 1rpx solid #e1eae4;
 }
 
 .field {
@@ -97,7 +101,7 @@
 
 .secret-content-input {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 2rpx;
+  letter-spacing: 0;
 }
 
 .content-foot {

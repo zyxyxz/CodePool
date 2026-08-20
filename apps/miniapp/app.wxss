@@ -1,6 +1,6 @@
 page {
   min-height: 100%;
-  background: #f4f7f5;
+  background: #f3f6f4;
   color: #17231d;
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   font-size: 28rpx;
@@ -22,24 +22,34 @@ button {
   justify-content: center;
   font-size: 28rpx;
   line-height: 1.25;
+  transition: opacity 120ms ease, transform 120ms ease;
 }
 
 button::after {
   border: 0;
 }
 
+button:active {
+  opacity: 0.78;
+  transform: scale(0.985);
+}
+
+button[disabled] {
+  opacity: 0.52;
+}
+
 .page {
   min-height: 100vh;
-  padding: 28rpx;
-  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+  padding: 32rpx 28rpx;
+  padding-bottom: calc(56rpx + env(safe-area-inset-bottom));
 }
 
 .card {
   background: #ffffff;
   border: 1rpx solid #e3ebe6;
-  border-radius: 28rpx;
+  border-radius: 16rpx;
   padding: 28rpx;
-  box-shadow: 0 12rpx 36rpx rgba(18, 54, 34, 0.06);
+  box-shadow: 0 8rpx 24rpx rgba(18, 54, 34, 0.045);
   margin-bottom: 20rpx;
 }
 
@@ -62,6 +72,35 @@ button::after {
   margin-bottom: 20rpx;
 }
 
+.page-header {
+  padding: 6rpx 4rpx 28rpx;
+}
+
+.eyebrow {
+  display: block;
+  color: #16724a;
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.page-title {
+  display: block;
+  margin-top: 10rpx;
+  color: #17231d;
+  font-size: 42rpx;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.page-desc {
+  display: block;
+  margin-top: 10rpx;
+  color: #66736b;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
 .muted {
   color: #718078;
 }
@@ -82,7 +121,7 @@ button::after {
 .button-danger,
 .button-ghost {
   min-height: 88rpx;
-  border-radius: 20rpx;
+  border-radius: 14rpx;
   padding: 20rpx 28rpx;
   font-weight: 650;
 }
@@ -115,7 +154,7 @@ button::after {
 .button-small {
   min-height: 72rpx;
   padding: 14rpx 22rpx;
-  border-radius: 18rpx;
+  border-radius: 12rpx;
   font-size: 24rpx;
 }
 
@@ -138,7 +177,7 @@ button::after {
   min-height: 88rpx;
   padding: 22rpx 24rpx;
   border: 1rpx solid #dbe5df;
-  border-radius: 20rpx;
+  border-radius: 14rpx;
   background: #f8faf9;
   color: #17231d;
 }
@@ -148,8 +187,14 @@ button::after {
   line-height: 1.6;
 }
 
+.input:focus,
+.textarea:focus {
+  border-color: #23855a;
+  background: #ffffff;
+}
+
 .state-card {
-  padding: 64rpx 36rpx;
+  padding: 56rpx 36rpx;
   text-align: center;
 }
 
@@ -179,8 +224,9 @@ button::after {
 
 .safe-note {
   padding: 20rpx 24rpx;
-  border-radius: 18rpx;
-  background: #f0f7f2;
+  border-left: 6rpx solid #87b99a;
+  border-radius: 10rpx;
+  background: #edf5ef;
   color: #526158;
   font-size: 23rpx;
   line-height: 1.6;

@@ -1,6 +1,6 @@
-.profile-header { padding: 10rpx 6rpx 30rpx; }
+.profile-header { padding: 0; }
 .profile-header text,.login-title,.login-desc,.menu-title,.menu-desc,.danger-note,.user-id,.joined { display: block; }
-.eyebrow { color: #15803d; font-size: 20rpx; font-weight: 750; letter-spacing: 3rpx; }
+.eyebrow { color: #15803d; font-size: 20rpx; font-weight: 750; letter-spacing: 0; }
 .page-title { margin-top: 10rpx; font-size: 42rpx; font-weight: 750; }
 .page-desc { margin-top: 8rpx; color: #718078; font-size: 23rpx; }
 .login-card { padding: 44rpx 36rpx; text-align: center; }
@@ -15,7 +15,7 @@
 .consent-row label { display: flex; align-items: center; }
 .consent-row checkbox { transform: scale(.72); }
 .legal-link { color: #15803d; }
-.account-card { padding: 30rpx; display: flex; align-items: center; gap: 20rpx; border-radius: 30rpx; background: #101820; color: #fff; }
+.account-card { padding: 30rpx; display: flex; align-items: center; gap: 20rpx; border-radius: 16rpx; background: #101820; color: #fff; }
 .signed-picker { width: 112rpx; margin: 0; flex: none; }
 .avatar-button.signed { width: 96rpx; margin: 0 auto; color: #aeb9b2; font-size: 18rpx; }
 .avatar-button.signed image { width: 88rpx; height: 88rpx; }

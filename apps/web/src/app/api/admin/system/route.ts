@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       service: {
         status: integrityOk ? "ok" : "error",
         health,
-        version: process.env.npm_package_version || "0.3.0",
+        version: process.env.npm_package_version || "0.3.3",
         commit: process.env.CODEPOOL_COMMIT_SHA || "unknown",
         nodeVersion: process.version,
         environment: env.isProduction ? "production" : "development",

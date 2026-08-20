@@ -37,6 +37,43 @@ test('device avatar fallback uses the selected image', async () => {
   assert.equal(await appDefinition.chooseAvatarImage(), 'wxfile://tmp/avatar.jpg');
 });
 
+test('device avatar falls back to legacy chooser only when chooseMedia is unavailable', async () => {
+  clearMiniappModules();
+  let appDefinition;
+  let chooseImageCalls = 0;
+  global.App = (definition) => { appDefinition = definition; };
+  global.wx = {
+    getStorageSync: () => '',
+    chooseMedia: ({ fail }) => fail({ errMsg: 'chooseMedia:fail not supported' }),
+    chooseImage: ({ success }) => {
+      chooseImageCalls += 1;
+      success({ tempFilePaths: ['wxfile://tmp/legacy-avatar.jpg'] });
+    },
+  };
+  require(path.join(miniappRoot, 'app.js'));
+  appDefinition.requestPrivacyAuthorization = async () => true;
+
+  assert.equal(await appDefinition.chooseAvatarImage(), 'wxfile://tmp/legacy-avatar.jpg');
+  assert.equal(chooseImageCalls, 1);
+});
+
+test('device avatar does not invoke legacy chooser after a user cancellation', async () => {
+  clearMiniappModules();
+  let appDefinition;
+  let chooseImageCalls = 0;
+  global.App = (definition) => { appDefinition = definition; };
+  global.wx = {
+    getStorageSync: () => '',
+    chooseMedia: ({ fail }) => fail({ errMsg: 'chooseMedia:fail cancel' }),
+    chooseImage: () => { chooseImageCalls += 1; },
+  };
+  require(path.join(miniappRoot, 'app.js'));
+  appDefinition.requestPrivacyAuthorization = async () => true;
+
+  assert.equal(await appDefinition.chooseAvatarImage(), '');
+  assert.equal(chooseImageCalls, 0);
+});
+
 test('official avatar selection persists and uploads immediately for a member', async () => {
   clearMiniappModules();
   const storedProfile = {
@@ -72,7 +109,7 @@ test('official avatar selection persists and uploads immediately for a member', 
   global.Page = (definition) => { global.__profilePage = definition; };
   global.wx = {
     getStorageSync: () => '',
-    getAccountInfoSync: () => ({ miniProgram: { version: '0.3.2' } }),
+    getAccountInfoSync: () => ({ miniProgram: { version: '0.3.3' } }),
     showToast: (options) => toasts.push(options),
   };
   require(path.join(miniappRoot, 'pages/profile/index.js'));

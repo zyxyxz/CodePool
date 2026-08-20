@@ -21,14 +21,15 @@
       <view>
         <text class="eyebrow">TEAM WORKSPACE</text>
         <text class="page-title">团队与权限</text>
-        <text class="page-desc">按最小权限原则管理成员和邀请。</text>
+        <text class="page-desc">成员、邀请和权限变更统一在这里管理。</text>
       </view>
-      <button class="create-button" bindtap="handleCreateTeam">＋ 新建</button>
+      <button class="create-button" bindtap="handleCreateTeam">新建团队</button>
     </view>
 
     <view class="card state-card" wx:if="{{loading}}">
       <text class="state-symbol">···</text>
-      <text class="state-title">正在同步团队</text>
+      <text class="state-title">正在同步团队与成员</text>
+      <text class="state-desc">权限变更会在同步完成后立即生效。</text>
     </view>
 
     <view class="card state-card" wx:elif="{{error}}">
@@ -40,8 +41,8 @@
 
     <view class="card state-card" wx:elif="{{!teams.length}}">
       <text class="state-symbol">+</text>
-      <text class="state-title">还没有团队</text>
-      <text class="state-desc">创建一个团队代码池，开始安全协作。</text>
+      <text class="state-title">还没有可用团队</text>
+      <text class="state-desc">创建团队，或通过邀请码加入已有团队代码池。</text>
       <button class="button-primary" bindtap="handleCreateTeam">创建第一个团队</button>
       <button class="button-ghost accept-empty" bindtap="handleAcceptInvite">使用邀请码加入</button>
     </view>
@@ -58,8 +59,8 @@
           </view>
         </picker>
         <view class="workspace-actions">
-          <button class="button-secondary" wx:if="{{canManage}}" loading="{{inviteCreating}}" bindtap="handleInvite">邀请成员</button>
-          <button class="button-ghost" bindtap="handleAcceptInvite">输入邀请码</button>
+          <button class="button-secondary" wx:if="{{canManage}}" loading="{{inviteCreating}}" bindtap="handleInvite">创建邀请</button>
+          <button class="button-ghost" bindtap="handleAcceptInvite">加入团队</button>
         </view>
       </view>
 
@@ -74,9 +75,9 @@
         </view>
       </view>
 
-      <view class="section-head"><text>团队成员</text><text>{{members.length}} 人</text></view>
+      <view class="section-head"><text>团队成员</text><text>{{members.length}} 位</text></view>
       <view class="card member-list">
-        <view class="empty-list" wx:if="{{!members.length}}">暂无成员数据</view>
+        <view class="empty-list" wx:if="{{!members.length}}">正在等待成员加入</view>
         <block wx:for="{{members}}" wx:key="userId">
           <view class="member-row">
             <image class="avatar" src="{{item.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
@@ -94,7 +95,7 @@
       <block wx:if="{{canManage}}">
         <view class="section-head"><text>最近邀请</text><text>{{invites.length}} 条</text></view>
         <view class="card invite-list">
-          <view class="empty-list" wx:if="{{!invites.length}}">还没有创建邀请</view>
+          <view class="empty-list" wx:if="{{!invites.length}}">没有进行中的邀请</view>
           <block wx:for="{{invites}}" wx:key="id">
             <view class="invite-row">
               <view><text class="invite-role">{{item.roleLabel}}</text><text class="invite-time">有效至 {{item.expiresText}}</text></view>
@@ -104,7 +105,7 @@
         </view>
       </block>
 
-      <view class="safe-note">所有者不可被移除或降级；管理员可管理内容和普通成员；成员可创建内容；访客仅可查看。权限变更会立即生效并写入审计。</view>
+      <view class="safe-note">权限变更会立即影响访问并写入审计。所有者不可被移除或降级；访客仅可查看。</view>
     </block>
   </block>
 </view>

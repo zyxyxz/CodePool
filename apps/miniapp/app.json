@@ -55,6 +55,5 @@
     "request": 15000
   },
   "__usePrivacyCheck__": true,
-  "lazyCodeLoading": "requiredComponents",
-  "sitemapLocation": "sitemap.json"
+  "lazyCodeLoading": "requiredComponents"
 }

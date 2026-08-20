@@ -9,10 +9,10 @@
 
 .totp-card {
   padding: 34rpx;
-  border-radius: 32rpx;
+  border-radius: 16rpx;
   background: #101820;
   color: #ffffff;
-  box-shadow: 0 18rpx 48rpx rgba(16, 24, 32, 0.18);
+  box-shadow: 0 12rpx 32rpx rgba(16, 24, 32, 0.14);
 }
 
 .service-row,
@@ -68,7 +68,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 64rpx;
   font-weight: 800;
-  letter-spacing: 10rpx;
+  letter-spacing: 0;
 }
 
 .code.visible {
@@ -127,6 +127,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16rpx;
+}
+
+.action-grid button:only-child {
+  grid-column: 1 / -1;
 }
 
 .share-ready {

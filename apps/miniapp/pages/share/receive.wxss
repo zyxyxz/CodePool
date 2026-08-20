@@ -1,7 +1,7 @@
 .share-header { padding: 20rpx 8rpx 34rpx; text-align: center; }
 .share-header text,.title,.identifier,.locked-content text,.success-banner text,.totp-warning { display: block; }
 .brand-mark { width: 90rpx; height: 90rpx; margin: 0 auto 20rpx; display: flex; align-items: center; justify-content: center; border-radius: 26rpx; background: #101820; color: #7ce79d; font-size: 30rpx; font-weight: 800; }
-.eyebrow { color: #15803d; font-size: 19rpx; font-weight: 750; letter-spacing: 3rpx; }
+.eyebrow { color: #15803d; font-size: 19rpx; font-weight: 750; letter-spacing: 0; }
 .page-title { margin-top: 10rpx; font-size: 40rpx; font-weight: 750; }
 .page-desc { margin: 10rpx auto 0; max-width: 560rpx; color: #718078; font-size: 23rpx; line-height: 1.55; }
 .error-card .state-symbol { color: #b42318; }

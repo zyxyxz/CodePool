@@ -12,7 +12,7 @@
     <view class="audit-header">
       <text class="eyebrow">SECURITY AUDIT</text>
       <text class="page-title">团队安全审计</text>
-      <text class="page-desc">记录必要操作元数据，不记录代码池正文或 TOTP 密钥。</text>
+      <text class="page-desc">用于追溯关键操作；不记录代码池正文或 TOTP 密钥。</text>
     </view>
 
     <picker wx:if="{{teams.length}}" mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
@@ -25,10 +25,10 @@
       </view>
     </scroll-view>
 
-    <view class="card state-card" wx:if="{{loading}}"><text class="state-symbol">···</text><text class="state-title">正在加载审计记录</text></view>
+    <view class="card state-card" wx:if="{{loading}}"><text class="state-symbol">···</text><text class="state-title">正在加载审计记录</text><text class="state-desc">仅同步当前权限范围内的操作元数据。</text></view>
     <view class="card state-card" wx:elif="{{error}}"><text class="state-symbol">!</text><text class="state-title">审计日志加载失败</text><text class="state-desc">{{error}}</text><button class="button-secondary" bindtap="handleRetry">重新加载</button></view>
     <view class="card state-card" wx:elif="{{!teams.length}}"><text class="state-symbol">∅</text><text class="state-title">暂无团队</text><text class="state-desc">创建或加入团队后，这里会显示安全操作记录。</text></view>
-    <view class="card state-card" wx:elif="{{!visibleLogs.length}}"><text class="state-symbol">✓</text><text class="state-title">暂无此类记录</text><text class="state-desc">当前筛选范围内没有安全事件。</text></view>
+    <view class="card state-card" wx:elif="{{!visibleLogs.length}}"><text class="state-symbol">✓</text><text class="state-title">暂无此类记录</text><text class="state-desc">当前筛选范围内没有安全事件。之后的查看、编辑和分享会显示在这里。</text></view>
 
     <view class="timeline" wx:else>
       <block wx:for="{{visibleLogs}}" wx:key="id">
@@ -43,6 +43,6 @@
       </block>
     </view>
 
-    <view class="safe-note" wx:if="{{visibleLogs.length}}">安全审计用于团队内部风控与问题追溯。请勿将成员标识和操作记录转发到无关群聊。</view>
+    <view class="safe-note" wx:if="{{visibleLogs.length}}">请将审计记录仅用于团队内部排障与追溯，避免转发成员标识或操作时间。</view>
   </block>
 </view>

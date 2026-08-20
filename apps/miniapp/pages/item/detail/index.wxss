@@ -9,7 +9,7 @@
 
 .meta-card,
 .content-card {
-  border-radius: 30rpx;
+  border-radius: 16rpx;
   padding: 32rpx;
 }
 
@@ -141,6 +141,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16rpx;
+}
+
+.action-grid button:only-child {
+  grid-column: 1 / -1;
 }
 
 .share-ready {

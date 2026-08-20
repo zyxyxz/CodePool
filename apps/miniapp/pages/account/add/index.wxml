@@ -2,7 +2,7 @@
   <view class="intro">
     <text class="eyebrow">{{editing ? 'EDIT TOTP' : 'SECURE TOTP'}}</text>
     <text class="title">{{editing ? '编辑动态验证码' : '添加动态验证码'}}</text>
-    <text class="desc">密钥加密保存，仅在生成验证码时于服务端短暂解密，不会回传给客户端。</text>
+    <text class="desc">密钥加密保存，仅在生成验证码时短暂使用；保存后无法查看或导出。</text>
   </view>
 
   <view class="card state-card" wx:if="{{loading}}">
@@ -20,7 +20,7 @@
   <block wx:else>
     <button class="scan-button" wx:if="{{!editing}}" bindtap="handleScan">
       <text class="scan-mark">▦</text>
-      <view><text class="scan-title">扫描 TOTP 二维码</text><text class="scan-desc">支持标准 otpauth:// 格式</text></view>
+      <view><text class="scan-title">扫描 TOTP 二维码</text><text class="scan-desc">自动填入标准 otpauth:// 配置</text></view>
       <text class="scan-arrow">›</text>
     </button>
 
@@ -84,7 +84,7 @@
       <view class="immutable-note" wx:else>为避免动态验证码意外失效，密钥、算法、位数和周期保存后不可修改。需要更换时，请新增验证成功后再删除旧记录。</view>
     </view>
 
-    <view class="safe-note">添加前请确认二维码来源可信。CodePool 不会通过分享卡片、日志或通知展示 TOTP 密钥。</view>
-    <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{editing ? '保存修改' : '加密并保存'}}</button>
+    <view class="safe-note">请确认二维码来源可信。CodePool 不会在分享卡片、日志或通知中展示 TOTP 密钥。</view>
+    <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{editing ? '保存修改' : '保存动态验证码'}}</button>
   </block>
 </view>

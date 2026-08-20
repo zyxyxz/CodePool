@@ -2,7 +2,7 @@
   <view class="intro">
     <text class="eyebrow">{{editing ? 'EDIT SECURE ITEM' : 'NEW SECURE ITEM'}}</text>
     <text class="title">{{editing ? '编辑共享内容' : '放入团队代码池'}}</text>
-    <text class="desc">正文会在服务端加密保存，团队列表与管理后台只展示必要元数据。</text>
+    <text class="desc">正文会加密保存。开始前确认团队、成员范围和内容有效期。</text>
   </view>
 
   <view class="card state-card" wx:if="{{loading}}">
@@ -54,7 +54,7 @@
         <picker range="{{expirations}}" range-key="label" value="{{expirationIndex}}" bindchange="handleExpirationChange">
           <view class="picker-value"><text>{{expirations[expirationIndex].label}}</text><text>选择 ›</text></view>
         </picker>
-        <text class="field-help">到期后内容会从成员列表中自动隐藏。</text>
+        <text class="field-help">到期后内容会从成员列表中自动隐藏，无法通过普通搜索找到。</text>
       </view>
 
       <view class="field content-field">
@@ -74,7 +74,7 @@
       </view>
     </view>
 
-    <view class="safe-note">安全提示：请确认接收成员范围。敏感正文的查看、编辑和分享都会记录在团队审计日志中。</view>
-    <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{editing ? '保存修改' : '加密并保存'}}</button>
+    <view class="safe-note">保存后，查看、编辑、复制和分享会记录到团队审计中；审计不包含正文。</view>
+    <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{editing ? '保存修改' : '保存到代码池'}}</button>
   </block>
 </view>

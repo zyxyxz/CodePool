@@ -3,8 +3,8 @@
 
   <view class="card state-card" wx:if="{{loading}}">
     <text class="state-symbol">···</text>
-    <text class="state-title">安全读取中</text>
-    <text class="state-desc">正在校验团队权限并解密内容。</text>
+    <text class="state-title">正在校验访问权限</text>
+    <text class="state-desc">先同步必要元数据；正文仅在你主动显示后读取。</text>
   </view>
 
   <view class="card state-card" wx:elif="{{error}}">
@@ -31,23 +31,23 @@
     <view class="content-card {{contentVisible ? 'visible' : 'masked'}}">
       <view class="content-head">
         <text>加密正文</text>
-        <text>{{contentVisible ? '60 秒后自动隐藏' : '默认遮挡'}}</text>
+        <text>{{contentVisible ? '60 秒后自动遮挡' : '默认遮挡'}}</text>
       </view>
       <text class="content-text" selectable="{{contentVisible}}">{{displayContent}}</text>
       <button class="reveal-button" bindtap="handleToggleContent">{{contentVisible ? '立即隐藏' : '显示内容'}}</button>
     </view>
 
     <view class="action-grid">
-      <button class="button-primary" bindtap="handleCopy">复制正文</button>
+      <button class="button-primary" bindtap="handleCopy">复制到剪贴板</button>
       <button class="button-secondary" wx:if="{{item.canEdit}}" bindtap="handleEdit">编辑内容</button>
       <button class="button-secondary" wx:if="{{item.canEdit}}" bindtap="handleDuplicate">复制为新条目</button>
-      <button class="button-secondary" wx:if="{{item.canShare}}" loading="{{sharing}}" bindtap="handleCreateShare">创建安全分享</button>
+      <button class="button-secondary" wx:if="{{item.canShare}}" loading="{{sharing}}" bindtap="handleCreateShare">创建一次性分享</button>
     </view>
 
     <view class="card share-ready" wx:if="{{shareToken}}">
       <view>
-        <text class="share-title">分享已就绪</text>
-        <text class="share-desc">有效期至 {{shareExpiresText}}，正文不会显示在转发卡片上。</text>
+        <text class="share-title">一次性分享已就绪</text>
+        <text class="share-desc">有效期至 {{shareExpiresText}}。转发卡片不会包含正文。</text>
       </view>
       <view class="share-actions">
         <button class="button-primary button-small" open-type="share">微信转发</button>
@@ -73,6 +73,6 @@
     </view>
 
     <button class="button-danger delete-button" wx:if="{{item.canDelete}}" bindtap="handleDelete">永久删除内容</button>
-    <view class="safe-note">每次查看、编辑、复制分享和领取都会产生必要的团队安全审计；审计记录不包含正文。</view>
+    <view class="safe-note">查看、编辑、复制与分享会产生必要审计记录；记录不包含正文。</view>
   </block>
 </view>

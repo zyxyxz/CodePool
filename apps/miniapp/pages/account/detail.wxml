@@ -4,6 +4,7 @@
   <view class="card state-card" wx:if="{{loading}}">
     <text class="state-symbol">···</text>
     <text class="state-title">正在校验访问权限</text>
+    <text class="state-desc">动态码仅在你主动显示时生成。</text>
   </view>
 
   <view class="card state-card" wx:elif="{{error}}">
@@ -31,7 +32,7 @@
       <progress wx:if="{{codeVisible}}" percent="{{progress}}" stroke-width="4" activeColor="#7CE79D" backgroundColor="#34443A" />
       <view class="code-actions">
         <button class="reveal-button" loading="{{codeLoading}}" bindtap="handleToggleCode">{{codeVisible ? '立即隐藏' : '显示动态码'}}</button>
-        <button class="copy-button" bindtap="handleCopy">复制</button>
+        <button class="copy-button" bindtap="handleCopy">复制动态码</button>
       </view>
     </view>
 
@@ -45,11 +46,11 @@
 
     <view class="action-grid">
       <button class="button-secondary" wx:if="{{account.canManage}}" bindtap="handleEdit">编辑信息</button>
-      <button class="button-secondary" wx:if="{{account.canShare}}" loading="{{sharing}}" bindtap="handleCreateShare">一次性分享</button>
+      <button class="button-secondary" wx:if="{{account.canShare}}" loading="{{sharing}}" bindtap="handleCreateShare">创建一次性分享</button>
     </view>
 
     <view class="card share-ready" wx:if="{{shareToken}}">
-      <text class="share-title">安全分享已就绪</text>
+      <text class="share-title">一次性分享已就绪</text>
       <text class="share-desc">有效期至 {{shareExpiresText}}，仅可领取一次。</text>
       <view class="share-actions">
         <button class="button-primary button-small" open-type="share">微信转发</button>
@@ -72,6 +73,6 @@
     </view>
 
     <button class="button-danger delete-button" wx:if="{{account.canManage}}" bindtap="handleDelete">永久删除动态验证码</button>
-    <view class="safe-note">动态码显示 60 秒后会自动遮挡，切换到后台也会立即清除。请勿截图或转发包含验证码的页面。</view>
+    <view class="safe-note">动态码会在 60 秒后自动遮挡，切换后台也会立即清除。请勿截图或转发包含验证码的页面。</view>
   </block>
 </view>

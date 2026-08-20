@@ -41,6 +41,11 @@ function isLocalAvatar(url) {
     && url.indexOf('/assets/') !== 0;
 }
 
+function isUnsupportedMediaApi(error) {
+  const message = String(error && (error.errMsg || error.message) || '').toLowerCase();
+  return /not support|not supported|not available|not implement|not found|undefined/.test(message);
+}
+
 function compressAvatar(filePath) {
   if (typeof wx.compressImage !== 'function') return Promise.resolve(filePath);
   return new Promise((resolve) => {
@@ -380,18 +385,14 @@ App({
         }
         reject(new Error('无法打开相册或相机，请检查微信隐私权限'));
       };
-      if (typeof wx.chooseMedia === 'function') {
-        wx.chooseMedia({
-          count: 1,
-          mediaType: ['image'],
-          sourceType: ['album', 'camera'],
-          sizeType: ['compressed'],
-          success: ({ tempFiles }) => resolve(tempFiles && tempFiles[0] ? tempFiles[0].tempFilePath : ''),
-          fail,
-        });
-        return;
-      }
-      if (typeof wx.chooseImage === 'function') {
+
+      // chooseImage stopped receiving maintenance updates in base library 2.21.0.
+      // Keep it only for clients that cannot provide chooseMedia.
+      const chooseLegacyImage = () => {
+        if (typeof wx.chooseImage !== 'function') {
+          reject(new Error('当前微信版本不支持选择头像，请升级微信后重试'));
+          return;
+        }
         wx.chooseImage({
           count: 1,
           sourceType: ['album', 'camera'],
@@ -399,9 +400,26 @@ App({
           success: ({ tempFilePaths }) => resolve(tempFilePaths && tempFilePaths[0] ? tempFilePaths[0] : ''),
           fail,
         });
+      };
+
+      if (typeof wx.chooseMedia === 'function') {
+        wx.chooseMedia({
+          count: 1,
+          mediaType: ['image'],
+          sourceType: ['album', 'camera'],
+          sizeType: ['compressed'],
+          success: ({ tempFiles }) => resolve(tempFiles && tempFiles[0] ? tempFiles[0].tempFilePath : ''),
+          fail: (error) => {
+            if (isUnsupportedMediaApi(error)) {
+              chooseLegacyImage();
+              return;
+            }
+            fail(error);
+          },
+        });
         return;
       }
-      reject(new Error('当前微信版本不支持选择头像，请升级微信后重试'));
+      chooseLegacyImage();
     }));
   },
 

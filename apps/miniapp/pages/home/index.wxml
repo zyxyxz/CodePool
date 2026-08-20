@@ -9,7 +9,7 @@
   <view class="card login-card" wx:if="{{needsLogin}}">
     <view class="brand-mark">CP</view>
     <view class="login-title">进入 {{workspaceName}}</view>
-    <view class="login-desc">微信登录仅用于识别团队成员。不会读取通讯录、手机号或聊天记录。</view>
+    <view class="login-desc">使用微信身份建立成员会话；不会读取通讯录、手机号或聊天记录。</view>
     <view class="avatar-picker">
       <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{loginLoading || avatarProcessing}}" aria-label="使用微信头像">
         <image class="login-avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
@@ -20,7 +20,7 @@
     <input class="input nickname-input" type="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || avatarProcessing || nicknameReviewInFlight}}" bindinput="handleNicknameInput" bindblur="handleNicknameBlur" bindnicknamereview="handleNicknameReview" />
     <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="#15803D" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
     <button class="button-primary login-button" loading="{{loginLoading}}" disabled="{{loginLoading || avatarProcessing || !legalConsent}}" bindtap="handleLogin">微信快捷登录</button>
-    <view class="privacy-copy">微信登录仅处理完成身份识别、团队协作和安全审计所需的信息。</view>
+    <view class="login-context"><text>仅处理身份识别、团队协作和必要审计信息</text><text>登录后可在“我的”中管理资料和退出本机</text></view>
   </view>
 
   <block wx:if="{{!needsLogin}}">
@@ -29,9 +29,12 @@
         <view>
           <view class="eyebrow">CODEPOOL WORKSPACE</view>
           <view class="hero-title">{{workspaceName}}</view>
-          <view class="hero-subtitle">代码片段、临时密文与动态验证码</view>
+          <view class="hero-subtitle">当前工作区的共享内容与动态验证码</view>
         </view>
-        <button class="refresh-button" bindtap="handleRetry" aria-label="刷新代码池">刷新</button>
+        <view class="hero-tools">
+          <button class="hero-tool" bindtap="handleRetry" aria-label="刷新代码池">↻</button>
+          <button class="hero-tool hero-tool-primary {{maintenanceMode ? 'maintenance' : ''}}" wx:if="{{teams.length && !loading}}" bindtap="handleAdd" aria-label="{{maintenanceMode ? '系统维护中' : '新增代码池内容'}}">＋</button>
+        </view>
       </view>
       <picker wx:if="{{teams.length}}" mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
         <view class="team-picker">
@@ -60,7 +63,7 @@
     <view class="card state-card" wx:if="{{loading}}">
       <view class="state-symbol loading-dot">···</view>
       <text class="state-title">正在同步代码池</text>
-      <text class="state-desc">敏感正文只会在你主动查看后解密。</text>
+      <text class="state-desc">正在校验权限并同步必要元数据；敏感正文不会自动读取。</text>
     </view>
 
     <view class="card state-card" wx:elif="{{error}}">
@@ -72,16 +75,16 @@
 
     <view class="card state-card" wx:elif="{{!teams.length}}">
       <view class="state-symbol">+</view>
-      <text class="state-title">创建第一个团队代码池</text>
-      <text class="state-desc">创建团队后即可添加内容并邀请同事协作。</text>
-      <button class="button-primary" bindtap="goTeam">创建团队</button>
+      <text class="state-title">先创建或加入一个团队</text>
+      <text class="state-desc">团队决定成员权限和内容可见范围。创建后即可添加内容并邀请同事协作。</text>
+      <button class="button-primary" bindtap="goTeam">前往团队</button>
     </view>
 
     <view class="card state-card" wx:elif="{{resultCount === 0}}">
       <view class="state-symbol">∅</view>
       <text class="state-title">{{query ? '没有匹配内容' : '代码池还是空的'}}</text>
       <text class="state-desc">{{query ? '换一个关键词或筛选条件试试。' : '添加第一条代码、密文或动态验证码。'}}</text>
-      <button class="button-primary" wx:if="{{!query}}" bindtap="handleAdd">添加内容</button>
+      <button class="button-primary" wx:if="{{!query}}" bindtap="handleAdd">添加第一项内容</button>
       <button class="button-secondary" wx:else bindtap="handleSearchClear">清除搜索</button>
     </view>
 
@@ -130,7 +133,5 @@
         </view>
       </block>
     </block>
-
-    <button class="add-button {{maintenanceMode ? 'disabled' : ''}}" wx:if="{{teams.length && !loading}}" bindtap="handleAdd" aria-label="添加代码池内容">{{maintenanceMode ? '维护中' : '＋ 添加'}}</button>
   </block>
 </view>
