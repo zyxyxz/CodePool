@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { readClipboard } = require('../../../utils/clipboard');
 const { friendlyError } = require('../../../utils/format');
 
 const app = getApp();
@@ -167,8 +168,7 @@ Page({
 
   async handlePaste() {
     try {
-      const result = await wx.getClipboardData();
-      const value = typeof result.data === 'string' ? result.data : '';
+      const value = await readClipboard();
       if (!value) {
         wx.showToast({ title: '剪贴板没有文本', icon: 'none' });
         return;
@@ -176,7 +176,7 @@ Page({
       const next = value.slice(0, 200000);
       this.setData({ 'form.content': next, contentLength: next.length });
     } catch (error) {
-      wx.showToast({ title: '无法读取剪贴板', icon: 'none' });
+      wx.showToast({ title: friendlyError(error, '无法读取剪贴板'), icon: 'none' });
     }
   },
 

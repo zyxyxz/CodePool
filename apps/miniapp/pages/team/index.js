@@ -1,4 +1,7 @@
 const api = require('../../utils/api');
+const { submittedNickname, notifyNicknameReview } = require('../../utils/nickname');
+const { copyText, readClipboard } = require('../../utils/clipboard');
+const { TEAM_COLORS, normalizeThemeColor } = require('../../utils/theme');
 const {
   ROLE_LABELS,
   formatDate,
@@ -7,6 +10,32 @@ const {
 } = require('../../utils/format');
 
 const app = getApp();
+const THEME_COLORS = TEAM_COLORS.map((value, index) => ({
+  value, label: ['森林绿', '晴空蓝', '鸢尾紫', '玫瑰粉', '暖橙', '湖水青'][index],
+}));
+const INVITE_ROLES = [
+  { value: 'member', label: '成员', help: '可创建、查看和分享内容' },
+  { value: 'guest', label: '访客', help: '仅可查看团队内容' },
+  { value: 'admin', label: '管理员', help: '可管理成员和敏感内容' },
+];
+const INVITE_DURATIONS = [
+  { label: '1 小时', hours: 1 },
+  { label: '4 小时', hours: 4 },
+  { label: '24 小时', hours: 24 },
+  { label: '7 天', hours: 168 },
+];
+
+function validThemeColor(color) {
+  return normalizeThemeColor(color);
+}
+
+function currentUserId() {
+  return app.globalData.user && app.globalData.user.id || '';
+}
+
+function hasSameSession(userId) {
+  return Boolean(userId && app.globalData.token && currentUserId() === userId);
+}
 
 function defaultProfile() {
   return app.getStoredProfile ? app.getStoredProfile() : {
@@ -23,8 +52,6 @@ Page({
     needsLogin: false,
     loginLoading: false,
     avatarProcessing: false,
-    nicknameReviewPending: false,
-    nicknameReviewInFlight: false,
     loginProfile: defaultProfile(),
     legalConsent: app.hasLegalConsent ? app.hasLegalConsent() : false,
     teams: [],
@@ -34,18 +61,45 @@ Page({
     canManage: false,
     members: [],
     invites: [],
+    teamDataLoading: false,
+    teamDataError: '',
     inviteToken: '',
     inviteRoleLabel: '',
     inviteExpiresText: '',
+    inviteStatusText: '',
+    inviteUsable: false,
     inviteCreating: false,
-  },
-
-  onLoad() {
-    this._approvedNickname = this.data.loginProfile.nickname;
+    inviteCopying: false,
+    inviteComposerOpen: false,
+    inviteRoles: INVITE_ROLES,
+    inviteDurations: INVITE_DURATIONS,
+    selectedInviteRole: 'member',
+    selectedInviteHours: 24,
+    inviteError: '',
+    teamEditorOpen: false,
+    teamSaving: false,
+    teamNameDraft: '',
+    teamColorDraft: '#15803D',
+    teamEditError: '',
+    themeColors: THEME_COLORS,
+    joinOpen: false,
+    joinToken: '',
+    joinError: '',
+    joinLoading: false,
+    joinPasting: false,
   },
 
   async onShow() {
     await this.initialize();
+  },
+
+  onHide() {
+    this.clearInviteExpiryTimer();
+  },
+
+  onUnload() {
+    this.clearInviteExpiryTimer();
+    this._generatedInvites = {};
   },
 
   async onPullDownRefresh() {
@@ -58,9 +112,11 @@ Page({
 
   async initialize(options = {}) {
     const hasSession = await app.awaitReady();
+    this.ensureInviteOwner();
     if (!hasSession) {
+      this._generatedInvites = {};
+      this.clearInviteExpiryTimer();
       const loginProfile = defaultProfile();
-      this._approvedNickname = loginProfile.nickname;
       this.setData({
         loading: false,
         needsLogin: true,
@@ -68,9 +124,17 @@ Page({
         teams: [],
         members: [],
         invites: [],
+        currentTeam: null,
+        canManage: false,
+        inviteToken: '',
+        inviteUsable: false,
+        teamEditorOpen: false,
+        inviteComposerOpen: false,
+        joinOpen: false,
+        teamSaving: false,
+        inviteCreating: false,
+        joinLoading: false,
         loginProfile,
-        nicknameReviewPending: false,
-        nicknameReviewInFlight: false,
         legalConsent: app.hasLegalConsent ? app.hasLegalConsent() : false,
       });
       return;
@@ -80,9 +144,14 @@ Page({
   },
 
   async loadTeams(options = {}) {
+    this.ensureInviteOwner();
+    const userId = currentUserId();
+    const sequence = (this._teamLoadSequence || 0) + 1;
+    this._teamLoadSequence = sequence;
     if (!options.silent) this.setData({ loading: true, error: '' });
     try {
-      const teams = await api.fetchTeams();
+      const teams = (await api.fetchTeams()).map((team) => ({ ...team, themeColor: validThemeColor(team.themeColor) }));
+      if (!hasSameSession(userId) || sequence !== this._teamLoadSequence) return;
       app.globalData.teams = teams;
       let teamIndex = teams.findIndex((team) => team.teamId === app.globalData.activeTeamId);
       if (teamIndex < 0) teamIndex = 0;
@@ -98,14 +167,14 @@ Page({
         loading: false,
         error: '',
         offline: false,
-        inviteToken: '',
-        inviteRoleLabel: '',
-        inviteExpiresText: '',
       });
+      this.applyGeneratedInvite();
       await this.loadTeamData();
     } catch (error) {
+      if (!hasSameSession(userId) || sequence !== this._teamLoadSequence) return;
       if (error.code === 'UNAUTHORIZED') {
         app.logout();
+        this.ensureInviteOwner();
         this.setData({ loading: false, needsLogin: true, error: '' });
         return;
       }
@@ -119,14 +188,20 @@ Page({
 
   async loadTeamData() {
     const team = this.data.currentTeam;
+    const userId = currentUserId();
     if (!team) {
-      this.setData({ members: [], invites: [] });
+      this.setData({ members: [], invites: [], teamDataLoading: false, teamDataError: '' });
       return;
     }
+    const sequence = (this._teamDataSequence || 0) + 1;
+    this._teamDataSequence = sequence;
+    const canManage = this.data.canManage;
+    this.setData({ teamDataLoading: true, teamDataError: '' });
     try {
       const requests = [api.fetchTeamMembers(team.teamId)];
-      if (this.data.canManage) requests.push(api.fetchTeamInvites(team.teamId));
+      if (canManage) requests.push(api.fetchTeamInvites(team.teamId));
       const results = await Promise.all(requests);
+      if (!hasSameSession(userId) || sequence !== this._teamDataSequence || !this.data.currentTeam || this.data.currentTeam.teamId !== team.teamId) return;
       const currentUserId = app.globalData.user && app.globalData.user.id;
       const members = results[0].map((member) => ({
         ...member,
@@ -134,7 +209,7 @@ Page({
         joinedText: formatDate(member.joinedAt),
         expiresText: member.expiresAt ? formatDate(member.expiresAt) : '',
         isSelf: member.userId === currentUserId,
-        manageable: this.data.canManage && member.role !== 'owner' && member.userId !== currentUserId,
+        manageable: canManage && member.role !== 'owner' && member.userId !== currentUserId,
       }));
       const invites = (results[1] || []).map((invite) => {
         const expired = isExpired(invite.expiresAt);
@@ -142,17 +217,23 @@ Page({
           ...invite,
           roleLabel: ROLE_LABELS[invite.role] || invite.role,
           expiresText: formatDate(invite.expiresAt),
-          statusText: invite.usedAt ? '已使用' : expired ? '已过期' : '待领取',
-          active: !invite.usedAt && !expired,
+          statusText: invite.revokedAt ? '已撤销' : invite.usedAt ? '已使用' : expired ? '已过期' : '待领取',
+          active: !invite.revokedAt && !invite.usedAt && !expired,
         };
       });
       this.setData({ members, invites });
+      this.applyGeneratedInvite(invites);
     } catch (error) {
-      this.setData({ error: friendlyError(error, '团队成员加载失败') });
+      if (hasSameSession(userId) && sequence === this._teamDataSequence && this.data.currentTeam && this.data.currentTeam.teamId === team.teamId) {
+        this.setData({ teamDataError: friendlyError(error, '成员与邀请暂时无法同步') });
+      }
+    } finally {
+      if (hasSameSession(userId) && sequence === this._teamDataSequence) this.setData({ teamDataLoading: false });
     }
   },
 
   handleTeamChange(e) {
+    if (this.data.teamSaving || this.data.inviteCreating) return;
     const teamIndex = Number(e.detail.value);
     const currentTeam = this.data.teams[teamIndex] || null;
     const canManage = Boolean(currentTeam && (currentTeam.role === 'owner' || currentTeam.role === 'admin'));
@@ -163,14 +244,75 @@ Page({
       canManage,
       members: [],
       invites: [],
-      inviteToken: '',
-      inviteRoleLabel: '',
-      inviteExpiresText: '',
+      teamDataError: '',
+      teamEditorOpen: false,
+      inviteComposerOpen: false,
     }, () => {
       if (currentTeam) app.setActiveTeam(currentTeam.teamId);
+      this.applyGeneratedInvite();
       this.loadTeamData();
     });
   },
+
+  handleEditTeam() {
+    this.ensureInviteOwner();
+    const team = this.data.currentTeam;
+    if (!team || !this.data.canManage) return;
+    this._editingTeamId = team.teamId;
+    this.setData({
+      teamEditorOpen: true,
+      teamNameDraft: team.name,
+      teamColorDraft: validThemeColor(team.themeColor),
+      teamEditError: '',
+    });
+  },
+
+  handleCloseTeamEditor() {
+    if (!this.data.teamSaving) this.setData({ teamEditorOpen: false });
+  },
+
+  handleTeamNameInput(e) {
+    this.setData({ teamNameDraft: e.detail.value, teamEditError: '' });
+  },
+
+  handleThemeChange(e) {
+    if (this.data.teamSaving) return;
+    this.setData({ teamColorDraft: validThemeColor(e.currentTarget.dataset.color) });
+  },
+
+  async handleSaveTeam(e) {
+    const team = this.data.currentTeam;
+    const userId = currentUserId();
+    if (this.data.teamSaving || !team || !this.data.canManage || team.teamId !== this._editingTeamId) return;
+    const submittedName = e && e.detail && e.detail.value && e.detail.value.teamName;
+    const name = String(submittedName === undefined ? this.data.teamNameDraft : submittedName).trim();
+    if (name.length < 2 || name.length > 48) {
+      this.setData({ teamEditError: '团队名称需为 2-48 个字符' });
+      return;
+    }
+    const themeColor = validThemeColor(this.data.teamColorDraft);
+    this.setData({ teamSaving: true, teamEditError: '' });
+    try {
+      if (!await app.guardMaintenance('编辑团队')) return;
+      if (!hasSameSession(userId)) return;
+      const updated = await api.updateTeam(team.teamId, { name, themeColor });
+      if (!hasSameSession(userId)) return;
+      this._teamLoadSequence = (this._teamLoadSequence || 0) + 1;
+      const teams = this.data.teams.map((item) => item.teamId === team.teamId ? { ...item, ...updated, name, themeColor } : item);
+      app.globalData.teams = teams;
+      const currentTeam = this.data.currentTeam && this.data.currentTeam.teamId === team.teamId
+        ? teams.find((item) => item.teamId === team.teamId)
+        : this.data.currentTeam;
+      this.setData({ teams, currentTeam, teamEditorOpen: false, loading: false });
+      wx.showToast({ title: '团队设置已更新', icon: 'success' });
+    } catch (error) {
+      if (hasSameSession(userId)) this.setData({ teamEditError: friendlyError(error, '保存失败，请重试') });
+    } finally {
+      if (hasSameSession(userId)) this.setData({ teamSaving: false });
+    }
+  },
+
+  handleSheetTap() {},
 
   async handleCreateTeam() {
     if (!await app.guardMaintenance('创建团队')) return;
@@ -200,162 +342,265 @@ Page({
   },
 
   handleInvite() {
+    this.ensureInviteOwner();
     if (!this.data.canManage || this.data.inviteCreating) return;
-    const roles = [
-      { value: 'member', label: '成员', help: '可创建、查看和分享内容' },
-      { value: 'guest', label: '访客', help: '仅可查看团队内容' },
-      { value: 'admin', label: '管理员', help: '可管理成员和敏感内容' },
-    ];
-    wx.showActionSheet({
-      itemList: roles.map((role) => `${role.label} · ${role.help}`),
-      success: ({ tapIndex }) => {
-        const role = roles[tapIndex];
-        if (role) this.chooseInviteDuration(role);
-      },
+    this.setData({
+      inviteComposerOpen: true,
+      selectedInviteRole: 'member',
+      selectedInviteHours: 24,
+      inviteError: '',
     });
   },
 
-  chooseInviteDuration(role) {
-    const durations = [
-      { label: '1 小时', hours: 1 },
-      { label: '4 小时', hours: 4 },
-      { label: '24 小时', hours: 24 },
-      { label: '7 天', hours: 168 },
-    ];
-    wx.showActionSheet({
-      itemList: durations.map((duration) => duration.label),
-      success: ({ tapIndex }) => {
-        const duration = durations[tapIndex];
-        if (duration) this.createInvite(role, duration);
-      },
-    });
+  handleCloseInviteComposer() {
+    if (!this.data.inviteCreating) this.setData({ inviteComposerOpen: false });
   },
 
-  async createInvite(role, duration) {
+  handleInviteRoleChange(e) {
+    const role = e.currentTarget.dataset.role;
+    if (!this.data.inviteCreating && INVITE_ROLES.some((item) => item.value === role)) {
+      this.setData({ selectedInviteRole: role, inviteError: '' });
+    }
+  },
+
+  handleInviteDurationChange(e) {
+    const hours = Number(e.currentTarget.dataset.hours);
+    if (!this.data.inviteCreating && INVITE_DURATIONS.some((item) => item.hours === hours)) {
+      this.setData({ selectedInviteHours: hours, inviteError: '' });
+    }
+  },
+
+  async handleGenerateInvite() {
+    this.ensureInviteOwner();
     const team = this.data.currentTeam;
-    if (!team) return;
-    if (!await app.guardMaintenance('创建团队邀请')) return;
-    this.setData({ inviteCreating: true });
-    wx.showLoading({ title: '生成中', mask: true });
+    const userId = currentUserId();
+    if (!team || !this.data.canManage || this.data.inviteCreating) return;
+    const role = INVITE_ROLES.find((item) => item.value === this.data.selectedInviteRole);
+    const duration = INVITE_DURATIONS.find((item) => item.hours === this.data.selectedInviteHours);
+    if (!role || !duration) return;
+    this.setData({ inviteCreating: true, inviteError: '' });
     try {
+      if (!await app.guardMaintenance('创建团队邀请')) return;
+      if (!hasSameSession(userId)) return;
       const invite = await api.createTeamInvite(team.teamId, {
         role: role.value,
         expiresInHours: duration.hours,
       });
-      this.setData({
-        inviteToken: invite.token,
-        inviteRoleLabel: role.label,
-        inviteExpiresText: formatDate(invite.expiresAt),
-      });
-      wx.showShareMenu({ withShareTicket: false });
-      await this.loadTeamData();
-      wx.showModal({
-        title: '成员邀请已生成',
-        content: `${role.label}权限，有效期至 ${formatDate(invite.expiresAt)}。请通过下方按钮转发，勿发送到公开群聊。`,
-        showCancel: false,
-      });
+      if (!hasSameSession(userId)) return;
+      if (!invite.token || !Number.isFinite(Date.parse(invite.expiresAt))) throw new Error('邀请码未完整生成，请重试');
+      this.ensureInviteOwner();
+      this._generatedInvites = this._generatedInvites || {};
+      this._generatedInvites[team.teamId] = { ...invite, teamId: team.teamId, role: role.value };
+      this.setData({ inviteComposerOpen: false });
+      this.applyGeneratedInvite();
+      if (typeof wx.showShareMenu === 'function') wx.showShareMenu({ withShareTicket: false, menus: ['shareAppMessage'] });
+      if (this.data.currentTeam && this.data.currentTeam.teamId === team.teamId) await this.loadTeamData();
+      wx.showToast({ title: '邀请码已生成', icon: 'success' });
     } catch (error) {
-      wx.showToast({ title: friendlyError(error, '邀请创建失败'), icon: 'none' });
+      if (hasSameSession(userId)) this.setData({ inviteError: friendlyError(error, '邀请创建失败，请重试') });
     } finally {
-      wx.hideLoading();
-      this.setData({ inviteCreating: false });
+      if (hasSameSession(userId)) this.setData({ inviteCreating: false });
     }
   },
 
-  handleCopyInvite() {
-    if (this.data.inviteToken) wx.setClipboardData({ data: this.data.inviteToken });
+  clearInviteExpiryTimer() {
+    if (this._inviteExpiryTimer) clearTimeout(this._inviteExpiryTimer);
+    this._inviteExpiryTimer = null;
   },
 
-  async handleAcceptInvite() {
-    if (!await app.guardMaintenance('领取团队邀请')) return;
-    const result = await wx.showModal({
-      title: '输入团队邀请码',
-      editable: true,
-      placeholderText: '粘贴队友发送的邀请码',
-      confirmText: '验证并加入',
+  ensureInviteOwner() {
+    const ownerId = app.globalData.token ? currentUserId() : '';
+    if (this._inviteOwnerId === ownerId) return;
+    const changedIdentity = this._inviteOwnerId !== undefined;
+    this._inviteOwnerId = ownerId;
+    this._generatedInvites = {};
+    this.clearInviteExpiryTimer();
+    this.setData({
+      inviteToken: '', inviteUsable: false, inviteStatusText: '',
+      inviteComposerOpen: false, inviteCreating: false, inviteCopying: false,
+      teamEditorOpen: false, teamSaving: false,
+      joinOpen: false, joinLoading: false, joinPasting: false, joinToken: '',
+      ...(changedIdentity ? { teams: [], currentTeam: null, canManage: false, members: [], invites: [], teamDataError: '' } : {}),
     });
-    if (!result.confirm) return;
-    const token = (result.content || '').trim();
-    if (!token) {
-      wx.showToast({ title: '请输入邀请码', icon: 'none' });
+  },
+
+  applyGeneratedInvite(invites) {
+    this.ensureInviteOwner();
+    this.clearInviteExpiryTimer();
+    const team = this.data.currentTeam;
+    const generated = team && this.data.canManage && this._generatedInvites && this._generatedInvites[team.teamId];
+    if (!generated) {
+      this.setData({ inviteToken: '', inviteRoleLabel: '', inviteExpiresText: '', inviteStatusText: '', inviteUsable: false });
       return;
     }
-    wx.showLoading({ title: '验证中', mask: true });
+    if (invites) {
+      const latest = invites.find((item) => item.id === generated.id);
+      if (latest) Object.assign(generated, { usedAt: latest.usedAt, revokedAt: latest.revokedAt });
+    }
+    const expiresAt = Date.parse(generated.expiresAt);
+    const expired = !Number.isFinite(expiresAt) || expiresAt <= Date.now();
+    const usable = !expired && !generated.usedAt && !generated.revokedAt;
+    this.setData({
+      inviteToken: generated.token,
+      inviteRoleLabel: ROLE_LABELS[generated.role] || generated.role,
+      inviteExpiresText: formatDate(generated.expiresAt),
+      inviteStatusText: generated.revokedAt ? '已撤销' : generated.usedAt ? '已使用' : expired ? '已过期' : '待领取',
+      inviteUsable: usable,
+    });
+    if (usable) this._inviteExpiryTimer = setTimeout(() => this.applyGeneratedInvite(), Math.max(1, expiresAt - Date.now()));
+  },
+
+  async handleCopyInvite() {
+    if (this.data.inviteCopying) return;
+    this.applyGeneratedInvite();
+    if (!this.data.inviteUsable) {
+      wx.showToast({ title: '此邀请已失效，请重新生成', icon: 'none' });
+      return;
+    }
+    this.setData({ inviteCopying: true });
     try {
+      await copyText(this.data.inviteToken, { successMessage: '邀请码已复制' });
+    } catch (error) {
+      wx.showToast({ title: friendlyError(error, '邀请码复制失败，请重试'), icon: 'none' });
+    } finally {
+      this.setData({ inviteCopying: false });
+    }
+  },
+
+  handleAcceptInvite() {
+    this.setData({ joinOpen: true, joinToken: '', joinError: '' });
+  },
+
+  handleCloseJoin() {
+    if (!this.data.joinLoading && !this.data.joinPasting) this.setData({ joinOpen: false });
+  },
+
+  handleJoinTokenInput(e) {
+    this.setData({ joinToken: e.detail.value, joinError: '' });
+  },
+
+  async handlePasteJoin() {
+    const userId = currentUserId();
+    if (this.data.joinLoading || this.data.joinPasting) return;
+    this.setData({ joinPasting: true, joinError: '' });
+    try {
+      const token = String(await readClipboard()).trim();
+      if (!hasSameSession(userId)) return;
+      if (!token) throw new Error('剪贴板为空，请先复制邀请码');
+      this.setData({ joinToken: token });
+      wx.showToast({ title: '邀请码已粘贴', icon: 'success' });
+    } catch (error) {
+      if (hasSameSession(userId)) this.setData({ joinError: friendlyError(error, '无法读取剪贴板，请手动粘贴') });
+    } finally {
+      if (hasSameSession(userId)) this.setData({ joinPasting: false });
+    }
+  },
+
+  async handleJoinTeam(e) {
+    const userId = currentUserId();
+    if (this.data.joinLoading || this.data.joinPasting) return;
+    const submitted = e && e.detail && e.detail.value && e.detail.value.inviteToken;
+    const token = String(submitted === undefined ? this.data.joinToken : submitted).trim();
+    if (!token) {
+      this.setData({ joinError: '请输入邀请码' });
+      return;
+    }
+    this.setData({ joinLoading: true, joinError: '' });
+    try {
+      if (!await app.guardMaintenance('领取团队邀请')) return;
+      if (!hasSameSession(userId)) return;
       const accepted = await api.acceptInvite(token);
+      if (!hasSameSession(userId)) return;
       if (accepted && accepted.teamId) app.setActiveTeam(accepted.teamId);
+      this.setData({ joinOpen: false, joinToken: '' });
       await app.refreshMe();
       await this.loadTeams({ silent: true });
       wx.showToast({ title: '已加入团队', icon: 'success' });
     } catch (error) {
-      wx.showToast({ title: friendlyError(error, '邀请码无效或已过期'), icon: 'none' });
+      if (!hasSameSession(userId)) return;
+      const message = friendlyError(error, '邀请码无效或已过期');
+      if (this.data.joinOpen) this.setData({ joinError: message });
+      else wx.showToast({ title: message, icon: 'none' });
     } finally {
-      wx.hideLoading();
+      if (hasSameSession(userId)) this.setData({ joinLoading: false });
     }
   },
 
   handleMemberAction(e) {
+    const team = this.data.currentTeam;
+    if (!team) return;
     const userId = e.currentTarget.dataset.userid;
     const member = this.data.members.find((item) => item.userId === userId);
     if (!member || !member.manageable) return;
+    const selectedMember = { ...member, teamId: team.teamId, teamName: team.name };
+    const actorId = currentUserId();
     wx.showActionSheet({
       itemList: ['设为管理员', '设为成员', '设为访客', '移出团队'],
       success: ({ tapIndex }) => {
-        if (tapIndex === 3) this.confirmRemoveMember(member);
-        else this.updateMemberRole(member, ['admin', 'member', 'guest'][tapIndex]);
+        if (!hasSameSession(actorId)) return;
+        if (tapIndex === 3) this.confirmRemoveMember(selectedMember);
+        else this.updateMemberRole(selectedMember, ['admin', 'member', 'guest'][tapIndex]);
       },
     });
   },
 
   async updateMemberRole(member, role) {
     if (!role || member.role === role) return;
+    const teamId = member.teamId || this.data.currentTeam && this.data.currentTeam.teamId;
+    const teamName = member.teamName || this.data.currentTeam && this.data.currentTeam.name || '原团队';
+    const actorId = currentUserId();
+    if (!teamId) return;
     if (!await app.guardMaintenance('调整成员权限')) return;
+    if (!hasSameSession(actorId)) return;
     const roleLabel = ROLE_LABELS[role] || role;
     const confirm = await wx.showModal({
       title: '调整成员权限',
-      content: `将「${member.nickname || '未命名成员'}」调整为${roleLabel}？`,
+      content: `将「${member.nickname || '未命名成员'}」在「${teamName}」的权限调整为${roleLabel}？`,
       confirmText: '确认调整',
     });
-    if (!confirm.confirm) return;
+    if (!confirm.confirm || !hasSameSession(actorId)) return;
     try {
-      await api.updateMemberRole(this.data.currentTeam.teamId, member.userId, { role });
-      await this.loadTeamData();
+      await api.updateMemberRole(teamId, member.userId, { role });
+      if (!hasSameSession(actorId)) return;
+      if (this.data.currentTeam && this.data.currentTeam.teamId === teamId) await this.loadTeamData();
       wx.showToast({ title: '权限已更新', icon: 'success' });
     } catch (error) {
-      wx.showToast({ title: friendlyError(error, '权限调整失败'), icon: 'none' });
+      if (hasSameSession(actorId)) wx.showToast({ title: friendlyError(error, '权限调整失败'), icon: 'none' });
     }
   },
 
   async confirmRemoveMember(member) {
+    const teamId = member.teamId || this.data.currentTeam && this.data.currentTeam.teamId;
+    const teamName = member.teamName || this.data.currentTeam && this.data.currentTeam.name || '原团队';
+    const actorId = currentUserId();
+    if (!teamId) return;
     const confirm = await wx.showModal({
       title: '移出团队？',
-      content: `移出「${member.nickname || '未命名成员'}」后，对方将立即失去团队内容访问权限。`,
+      content: `从「${teamName}」移出「${member.nickname || '未命名成员'}」后，对方将立即失去该团队的访问权限。`,
       confirmText: '移出团队',
       confirmColor: '#B42318',
     });
-    if (!confirm.confirm) return;
+    if (!confirm.confirm || !hasSameSession(actorId)) return;
     try {
-      await api.removeMember(this.data.currentTeam.teamId, member.userId);
-      await this.loadTeamData();
+      await api.removeMember(teamId, member.userId);
+      if (!hasSameSession(actorId)) return;
+      if (this.data.currentTeam && this.data.currentTeam.teamId === teamId) await this.loadTeamData();
       wx.showToast({ title: '成员已移出', icon: 'success' });
     } catch (error) {
-      wx.showToast({ title: friendlyError(error, '移除失败'), icon: 'none' });
+      if (hasSameSession(actorId)) wx.showToast({ title: friendlyError(error, '移除失败'), icon: 'none' });
     }
   },
 
-  async handleLogin() {
-    if (this.data.loginLoading) return;
-    if (this.data.nicknameReviewPending) {
-      wx.showToast({ title: '请等待昵称安全审核完成', icon: 'none' });
-      return;
-    }
+  async handleLogin(e) {
+    if (this.data.loginLoading || this.data.avatarProcessing) return;
     if (!this.data.legalConsent) {
       wx.showToast({ title: '请先勾选同意隐私政策和用户协议', icon: 'none' });
       return;
     }
-    app.setStoredProfile(this.data.loginProfile);
     this.setData({ loginLoading: true });
     try {
+      const nickname = submittedNickname(e);
+      app.setStoredProfile({ ...this.data.loginProfile, nickname });
       await app.ensureLogin(true);
       await this.initialize();
     } catch (error) {
@@ -365,41 +610,7 @@ Page({
     }
   },
 
-  handleNicknameInput(e) {
-    const nickname = e.detail.value;
-    this.setData({
-      'loginProfile.nickname': nickname,
-      nicknameReviewPending: nickname.trim() !== String(this._approvedNickname || '').trim(),
-    });
-  },
-
-  handleNicknameBlur() {
-    const nickname = this.data.loginProfile.nickname;
-    if (nickname.trim() === String(this._approvedNickname || '').trim()) {
-      this.setData({ nicknameReviewPending: false, nicknameReviewInFlight: false });
-      return;
-    }
-    this._reviewedNickname = nickname;
-    this.setData({ nicknameReviewPending: true, nicknameReviewInFlight: true });
-  },
-
-  handleNicknameReview(e) {
-    const reviewedNickname = this._reviewedNickname;
-    if (!reviewedNickname || reviewedNickname !== this.data.loginProfile.nickname) {
-      this.setData({ nicknameReviewInFlight: false });
-      return;
-    }
-    if (e.detail && e.detail.pass === true) {
-      this._approvedNickname = reviewedNickname;
-      this._reviewedNickname = '';
-      this.setData({ nicknameReviewPending: false, nicknameReviewInFlight: false });
-      return;
-    }
-    const nickname = this._approvedNickname || defaultProfile().nickname;
-    this._reviewedNickname = '';
-    this.setData({ 'loginProfile.nickname': nickname, nicknameReviewPending: false, nicknameReviewInFlight: false });
-    wx.showToast({ title: e.detail && e.detail.timeout ? '昵称审核超时，请重新输入' : '昵称未通过微信安全审核', icon: 'none' });
-  },
+  handleNicknameReview: notifyNicknameReview,
 
   async storeChosenAvatar(tempFilePath) {
     const avatarUrl = await app.persistAvatarFile(tempFilePath);
@@ -456,7 +667,8 @@ Page({
   },
 
   onShareAppMessage() {
-    if (this.data.inviteToken && this.data.currentTeam) {
+    this.applyGeneratedInvite();
+    if (this.data.inviteUsable && this.data.currentTeam) {
       return {
         title: `邀请你加入 ${this.data.currentTeam.name}`,
         path: `/pages/home/index?inviteToken=${encodeURIComponent(this.data.inviteToken)}`,

@@ -4,6 +4,7 @@ const {
   REQUEST_TIMEOUT,
   CLIENT_VERSION,
 } = require('../config');
+const { normalizeThemeColor } = require('./theme');
 
 let authToken = wx.getStorageSync('CODEPOOL_TOKEN') || '';
 let unauthorizedHandler = null;
@@ -155,6 +156,7 @@ function normalizeTeam(team) {
     createdAt: team.createdAt || team.created_at,
     memberCount: Number(team.memberCount || team.member_count || 0),
     itemCount: Number(team.itemCount || team.item_count || 0),
+    themeColor: normalizeThemeColor(team.themeColor || team.theme_color),
   };
 }
 
@@ -260,6 +262,7 @@ const api = {
   }),
   fetchTeams: () => request({ url: '/teams' }).then((res) => normalizeTeams(listFromResponse(res))),
   createTeam: (payload) => request({ url: '/teams', method: 'POST', data: payload }).then(normalizeTeam),
+  updateTeam: (teamId, payload) => request({ url: `/teams/${teamId}`, method: 'PATCH', data: payload }).then(normalizeTeam),
   fetchTeamMembers: (teamId) => request({ url: `/teams/${teamId}/members` })
     .then((res) => listFromResponse(res).map(normalizeMember)),
   updateMemberRole: (teamId, userId, payload) => request({
@@ -308,6 +311,11 @@ const api = {
     preserveEmptyKeys: options.preserveEmptyKeys || [],
   }).then(normalizeAccount),
   deleteAccount: (accountId) => request({ url: `/accounts/${accountId}`, method: 'DELETE' }),
+  transferAccount: (accountId, sourceTeamId, targetTeamId) => request({
+    url: `/accounts/${accountId}/transfer`,
+    method: 'POST',
+    data: { sourceTeamId, targetTeamId },
+  }).then((res) => ({ ...res, account: normalizeAccount(res.account) })),
   fetchItems: (teamId, query, kind) => {
     if (!teamId) return Promise.resolve([]);
     return request({ url: '/items', data: { teamId, q: query, kind } })

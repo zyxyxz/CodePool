@@ -187,6 +187,10 @@ const migrations = [
   ALTER TABLE users ADD COLUMN avatar_version INTEGER NOT NULL DEFAULT 0;
   UPDATE users SET avatar_url = NULL;
   `,
+  `
+  ALTER TABLE teams ADD COLUMN theme_color TEXT NOT NULL DEFAULT '#15803D'
+    CHECK(theme_color IN ('#15803D', '#2563EB', '#7C3AED', '#DB2777', '#EA580C', '#0891B2'));
+  `,
 ];
 
 declare global {

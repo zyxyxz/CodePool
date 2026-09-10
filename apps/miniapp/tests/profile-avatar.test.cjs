@@ -109,7 +109,7 @@ test('official avatar selection persists and uploads immediately for a member', 
   global.Page = (definition) => { global.__profilePage = definition; };
   global.wx = {
     getStorageSync: () => '',
-    getAccountInfoSync: () => ({ miniProgram: { version: '0.3.3' } }),
+    getAccountInfoSync: () => ({ miniProgram: { version: '0.3.4' } }),
     showToast: (options) => toasts.push(options),
   };
   require(path.join(miniappRoot, 'pages/profile/index.js'));

@@ -301,18 +301,19 @@ App({
     const nickname = (profile.nickname || '').trim();
     const avatarUrl = profile.avatarUrl || profile.avatar_url || '';
     const hasPendingAvatar = Boolean(profile.pendingAvatar && isLocalAvatar(avatarUrl));
+    const preserveLocalAvatar = options.updateAvatar === false;
     this._profileSyncPromise = (async () => {
       try {
         const update = {};
         if (options.updateNickname !== false) update.nickname = nickname;
-        if (hasPendingAvatar) {
+        if (hasPendingAvatar && !preserveLocalAvatar) {
           const compressedPath = await compressAvatar(avatarUrl);
           update.avatar = await readAvatar(compressedPath);
         }
         if (Object.keys(update).length) await api.updateProfile(update);
-        return await this.refreshMe();
+        return await this.refreshMe({ preserveLocalAvatar });
       } catch (error) {
-        await this.refreshMe().catch(() => undefined);
+        await this.refreshMe({ preserveLocalAvatar }).catch(() => undefined);
         this.setStoredProfile({
           nickname: profile.nickname,
           ...(hasPendingAvatar ? { avatarUrl, avatar_url: avatarUrl, pendingAvatar: true } : {}),

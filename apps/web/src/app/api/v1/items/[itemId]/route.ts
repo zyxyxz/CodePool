@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { getItemForUser, requireTeamRole } from "@/server/access";
 import { audit } from "@/server/audit";
-import { fail, jsonBody, ok } from "@/server/api";
+import { ApiError, fail, jsonBody, ok } from "@/server/api";
 import { requireMember } from "@/server/auth";
 import { encrypt } from "@/server/crypto";
 import { db } from "@/server/db";
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest, context: Context) {
       errorCode: "ITEM_REVEAL_RATE_LIMITED",
     });
     const row = getItemForUser(userId, itemId) as unknown as ItemRow;
+    if (row.kind === "totp") throw new ApiError(404, "请通过动态验证码入口访问", "ITEM_NOT_FOUND");
     audit({ request, teamId: row.team_id, actorId: userId, action: "ITEM_REVEAL", targetType: row.kind, targetId: itemId });
     return ok(revealItem(row), {
       headers: { "Cache-Control": "private, no-store, max-age=0" },
@@ -50,9 +51,10 @@ export async function PATCH(request: NextRequest, context: Context) {
       identifier: z.string().trim().max(160).nullable().optional(),
       language: z.string().trim().max(40).nullable().optional(),
       expiresAt: z.iso.datetime().nullable().optional(),
-    }).parse(await jsonBody(request));
+    }).strict().parse(await jsonBody(request));
     await requireMember(request);
     const row = getItemForUser(userId, itemId) as unknown as ItemRow;
+    if (row.kind === "totp") throw new ApiError(404, "请通过动态验证码入口访问", "ITEM_NOT_FOUND");
     requireTeamRole(userId, row.team_id, ["owner", "admin", "member"]);
     enforceRateLimit(request, { namespace: "item-update-user", subject: `user:${userId}`, limit: 240, windowSeconds: 3_600, errorCode: "ITEM_WRITE_RATE_LIMITED" });
     enforceRateLimit(request, { namespace: "item-update-item", subject: `item:${itemId}`, limit: 120, windowSeconds: 3_600, errorCode: "ITEM_WRITE_RATE_LIMITED" });
@@ -90,6 +92,7 @@ export async function DELETE(request: NextRequest, context: Context) {
     const { userId } = await requireMember(request);
     const { itemId } = await context.params;
     const row = getItemForUser(userId, itemId) as unknown as ItemRow;
+    if (row.kind === "totp") throw new ApiError(404, "请通过动态验证码入口访问", "ITEM_NOT_FOUND");
     requireTeamRole(userId, row.team_id, ["owner", "admin"]);
     db.prepare("DELETE FROM vault_items WHERE id = ?").run(itemId);
     audit({ request, teamId: row.team_id, actorId: userId, action: "ITEM_DELETE", targetType: row.kind, targetId: itemId });

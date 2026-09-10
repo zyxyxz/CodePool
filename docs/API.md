@@ -24,6 +24,7 @@ ETag 重新验证。
 | GET | `/avatars/:userId` | 使用成员 API 下发的短时 HMAC 地址读取头像；签名失效、停用或注销后返回 404 |
 | GET/POST/DELETE | `/auth/deletion-request` | 查询、提交或撤回注销申请 |
 | GET/POST | `/teams` | 团队列表或创建团队 |
+| PATCH | `/teams/:id` | 管理员更新团队名称和主题色 |
 | GET | `/teams/:id/members` | 团队成员列表 |
 | PATCH/DELETE | `/teams/:id/members/:userId` | 调整角色或移除成员 |
 | GET/POST | `/teams/:id/invites` | 邀请列表或创建邀请 |
@@ -32,6 +33,7 @@ ETag 重新验证。
 | GET/PATCH/DELETE | `/items/:id` | 显式读取、更新或删除内容 |
 | GET/POST | `/accounts` | TOTP 列表或导入 |
 | GET/PATCH/DELETE | `/accounts/:id` | TOTP 元数据管理，不返回密钥 |
+| POST | `/accounts/:id/transfer` | 管理员将 TOTP 转移到其他团队，撤销原分享 |
 | GET | `/accounts/:id/code` | 按需计算当前动态码 |
 | GET/POST | `/shares` | 分享历史或创建限时分享 |
 | GET | `/shares/public/:token` | 仅返回无敏感值预览，不消耗次数 |
@@ -42,6 +44,25 @@ ETag 重新验证。
 列表页不会自动返回正文或动态码。普通内容详情和动态码必须分别通过显式读取接口获取。
 维护模式下，新增、编辑、邀请领取和匿名分享领取返回 `503 MAINTENANCE_MODE`；撤销、删除和
 注销操作仍可用于止损与履行用户权利。
+
+### 团队信息
+
+`PATCH /teams/:id` 接收 `{ "name": "工程团队", "themeColor": "#2563EB" }`，至少提供一项。
+名称去除首尾空白后为 2–48 个字符。主题色仅接受 `#15803D`、`#2563EB`、`#7C3AED`、
+`#DB2777`、`#EA580C`、`#0891B2`，默认 `#15803D`。需当前团队 owner/admin 权限。
+创建团队也可提供 `themeColor`；团队列表、登录和资料接口中的团队信息均返回该字段。
+
+### 动态验证码转移
+
+`POST /accounts/:id/transfer` 接收必填的 `{ "sourceTeamId": "UUID", "targetTeamId": "UUID" }`。
+调用者必须在两个活跃团队中均为有效 owner/admin，目标团队需有可用内容配额。成功返回
+`{ "account": { "id": "UUID", "teamId": "目标团队 UUID", "...": "原有元数据" }, "revokedShareCount": 1 }`。
+转移保持 ID、加密密钥、算法、周期和创建信息，撤销该条目的所有尚未撤销的分享，并分别写入
+源团队 `TOTP_TRANSFER_OUT` 和目标团队 `TOTP_TRANSFER_IN` 审计；整个操作原子完成。
+源团队不再拥有访问权限，旧分享无法领取，目标团队可重新创建分享。
+同一团队返回 `422 SAME_TEAM_TRANSFER`；已转移且调用者仍有访问权时返回
+`409 ACCOUNT_TEAM_CHANGED`，调用者失去访问权时返回 `404 ITEM_NOT_FOUND`。
+通用 `/items/:id` 接口拒绝访问或修改 TOTP，TOTP 密钥不会作为普通内容正文返回。
 
 ## 运营 API `/api/admin`
 

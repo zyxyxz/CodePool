@@ -6,7 +6,7 @@
     <text class="notice-content">{{announcement || '部分新增与变更操作暂不可用，请稍后再试。'}}</text>
   </view>
 
-  <view class="card login-card" wx:if="{{needsLogin}}">
+  <form class="card login-card" wx:if="{{needsLogin}}" bindsubmit="handleLogin">
     <view class="brand-mark">CP</view>
     <view class="login-title">进入 {{workspaceName}}</view>
     <view class="login-desc">使用微信身份建立成员会话；不会读取通讯录、手机号或聊天记录。</view>
@@ -17,14 +17,14 @@
       </button>
       <button class="avatar-alternate" disabled="{{loginLoading || avatarProcessing}}" bindtap="handleChooseAvatarFallback">相册 / 相机</button>
     </view>
-    <input class="input nickname-input" type="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || avatarProcessing || nicknameReviewInFlight}}" bindinput="handleNicknameInput" bindblur="handleNicknameBlur" bindnicknamereview="handleNicknameReview" />
+    <input class="input nickname-input" type="nickname" name="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || avatarProcessing}}" bindnicknamereview="handleNicknameReview" />
     <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="#15803D" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
-    <button class="button-primary login-button" loading="{{loginLoading}}" disabled="{{loginLoading || avatarProcessing || !legalConsent}}" bindtap="handleLogin">微信快捷登录</button>
+    <button class="button-primary login-button" form-type="submit" loading="{{loginLoading}}" disabled="{{loginLoading || avatarProcessing || !legalConsent}}">微信快捷登录</button>
     <view class="login-context"><text>仅处理身份识别、团队协作和必要审计信息</text><text>登录后可在“我的”中管理资料和退出本机</text></view>
-  </view>
+  </form>
 
   <block wx:if="{{!needsLogin}}">
-    <view class="hero-card">
+    <view class="hero-card" style="border-top: 6rpx solid {{currentTeam.themeColor || '#15803D'}};">
       <view class="hero-top">
         <view>
           <view class="eyebrow">CODEPOOL WORKSPACE</view>
@@ -33,7 +33,7 @@
         </view>
         <view class="hero-tools">
           <button class="hero-tool" bindtap="handleRetry" aria-label="刷新代码池">↻</button>
-          <button class="hero-tool hero-tool-primary {{maintenanceMode ? 'maintenance' : ''}}" wx:if="{{teams.length && !loading}}" bindtap="handleAdd" aria-label="{{maintenanceMode ? '系统维护中' : '新增代码池内容'}}">＋</button>
+          <button class="hero-tool hero-tool-primary {{maintenanceMode ? 'maintenance' : ''}}" style="background: {{maintenanceMode ? '#765000' : currentTeam.themeColor || '#15803D'}};" wx:if="{{teams.length && !loading}}" bindtap="handleAdd" aria-label="{{maintenanceMode ? '系统维护中' : '新增代码池内容'}}">＋</button>
         </view>
       </view>
       <picker wx:if="{{teams.length}}" mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">

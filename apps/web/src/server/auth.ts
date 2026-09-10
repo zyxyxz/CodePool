@@ -60,12 +60,18 @@ export async function requireMember(request: NextRequest) {
   } catch {
     throw new Error("UNAUTHORIZED");
   }
+  assertMemberSession(session);
+  return session;
+}
+
+// Call inside write transactions as well: token verification may yield while an
+// operator disables the user or invalidates their sessions in another request.
+export function assertMemberSession(session: Session) {
   if (session.scope !== "member") throw new Error("UNAUTHORIZED");
   const user = db
     .prepare("SELECT session_version AS sessionVersion FROM users WHERE id = ? AND status = 'active'")
     .get(session.userId) as { sessionVersion: number } | undefined;
   if (!user || session.sessionVersion !== user.sessionVersion) throw new Error("UNAUTHORIZED");
-  return session;
 }
 
 export async function getAdminSession() {

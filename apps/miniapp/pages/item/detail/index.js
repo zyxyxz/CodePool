@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { copyText } = require('../../../utils/clipboard');
 const {
   KIND_LABELS,
   formatDate,
@@ -164,7 +165,10 @@ Page({
       confirmText: '继续复制',
       confirmColor: '#15803D',
     });
-    if (confirm.confirm) wx.setClipboardData({ data: this._plainContent });
+    if (confirm.confirm) {
+      try { await copyText(this._plainContent); }
+      catch (error) { wx.showToast({ title: friendlyError(error, '复制失败'), icon: 'none' }); }
+    }
   },
 
   handleEdit() {
@@ -259,8 +263,10 @@ Page({
     }
   },
 
-  handleCopyShareToken() {
-    if (this.data.shareToken) wx.setClipboardData({ data: this.data.shareToken });
+  async handleCopyShareToken() {
+    if (!this.data.shareToken) return;
+    try { await copyText(this.data.shareToken, { successMessage: '口令已复制' }); }
+    catch (error) { wx.showToast({ title: friendlyError(error, '复制失败'), icon: 'none' }); }
   },
 
   async handleRevokeShare(e) {

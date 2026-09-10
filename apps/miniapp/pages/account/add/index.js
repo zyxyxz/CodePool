@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { readClipboard } = require('../../../utils/clipboard');
 const { friendlyError } = require('../../../utils/format');
 
 const app = getApp();
@@ -150,15 +151,14 @@ Page({
 
   async handlePasteSecret() {
     try {
-      const result = await wx.getClipboardData();
-      const secret = String(result.data || '').replace(/\s/g, '').toUpperCase();
+      const secret = (await readClipboard()).replace(/\s/g, '').toUpperCase();
       if (!secret) {
         wx.showToast({ title: '剪贴板没有密钥', icon: 'none' });
         return;
       }
       this.setData({ 'form.secret': secret });
     } catch (error) {
-      wx.showToast({ title: '无法读取剪贴板', icon: 'none' });
+      wx.showToast({ title: friendlyError(error, '无法读取剪贴板'), icon: 'none' });
     }
   },
 

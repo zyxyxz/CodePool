@@ -17,11 +17,14 @@
   <block wx:elif="{{account}}">
     <view class="totp-card">
       <view class="service-row">
-        <view>
+        <view class="service-heading">
           <text class="service">{{account.issuer}}</text>
           <text class="label">{{account.label}}</text>
         </view>
-        <text class="security-badge">TOTP</text>
+        <view class="card-tools">
+          <text class="security-badge">TOTP</text>
+          <button class="more-button" wx:if="{{account.canManage}}" bindtap="handleMore" disabled="{{transferring || deleting || sharing}}" aria-label="更多操作">···</button>
+        </view>
       </view>
 
       <view class="code-wrap">
@@ -31,13 +34,14 @@
 
       <progress wx:if="{{codeVisible}}" percent="{{progress}}" stroke-width="4" activeColor="#7CE79D" backgroundColor="#34443A" />
       <view class="code-actions">
-        <button class="reveal-button" loading="{{codeLoading}}" bindtap="handleToggleCode">{{codeVisible ? '立即隐藏' : '显示动态码'}}</button>
-        <button class="copy-button" bindtap="handleCopy">复制动态码</button>
+        <button class="reveal-button" loading="{{codeLoading}}" disabled="{{transferring || deleting}}" bindtap="handleToggleCode">{{codeVisible ? '立即隐藏' : '显示动态码'}}</button>
+        <button class="copy-button" disabled="{{transferring || deleting}}" bindtap="handleCopy">复制动态码</button>
       </view>
     </view>
 
     <view class="card info-card">
       <text class="section-title">账号信息</text>
+      <view class="info-row"><text>所属团队</text><text>{{account.teamName}}</text></view>
       <view class="info-row"><text>登录账号</text><text selectable="true">{{account.accountIdentifier || '未填写'}}</text></view>
       <view class="info-row"><text>团队备注</text><text>{{account.remark || '未填写'}}</text></view>
       <view class="info-row"><text>算法配置</text><text>{{account.algorithm}} · {{account.digits}} 位 · {{account.period}} 秒</text></view>
@@ -72,7 +76,25 @@
       </block>
     </view>
 
-    <button class="button-danger delete-button" wx:if="{{account.canManage}}" bindtap="handleDelete">永久删除动态验证码</button>
     <view class="safe-note">动态码会在 60 秒后自动遮挡，切换后台也会立即清除。请勿截图或转发包含验证码的页面。</view>
   </block>
+
+  <view class="sheet-mask" wx:if="{{transferOpen}}" bindtap="closeTransfer" catchtouchmove="stopPropagation">
+    <view class="transfer-sheet" catchtap="stopPropagation" role="dialog" aria-label="转移到其他团队">
+      <view class="sheet-header"><text class="section-title">转移到其他团队</text><button class="sheet-close" bindtap="closeTransfer" disabled="{{transferring}}" aria-label="关闭">×</button></view>
+      <text class="transfer-desc">选择你有管理权限的目标团队。转移后，原团队将无法访问此动态验证码。</text>
+      <input wx:if="{{transferTeams.length}}" class="input transfer-search" value="{{transferQuery}}" bindinput="handleTransferSearch" disabled="{{transferring}}" maxlength="48" placeholder="搜索目标团队" />
+      <view wx:if="{{transferLoading}}" class="transfer-state">正在加载可转入的团队…</view>
+      <view wx:elif="{{transferError}}" class="transfer-error" role="alert"><text>{{transferError}}</text><button wx:if="{{!transferTeams.length}}" class="button-ghost button-small" bindtap="loadTransferTeams">重新加载</button></view>
+      <view wx:elif="{{!transferTeams.length}}" class="transfer-state">暂无其他可转入的团队。请先创建团队，或请目标团队所有者将你设为管理员。</view>
+      <scroll-view class="transfer-list" scroll-y="true" wx:if="{{!transferLoading && transferTeams.length}}">
+        <button wx:for="{{visibleTransferTeams}}" wx:key="teamId" class="transfer-team {{targetTeamId === item.teamId ? 'selected' : ''}}" data-id="{{item.teamId}}" bindtap="handleTransferSelect" disabled="{{transferring}}" aria-label="{{item.name}}">
+          <view><text class="transfer-team-name">{{item.name}}</text><text class="transfer-team-meta">{{item.memberCount}} 位成员 · {{item.role === 'owner' ? '所有者' : '管理员'}}</text></view><text class="transfer-check">{{targetTeamId === item.teamId ? '✓' : '○'}}</text>
+        </button>
+        <view wx:if="{{!visibleTransferTeams.length}}" class="transfer-state">没有匹配的团队</view>
+      </scroll-view>
+      <text class="transfer-note">已有分享将在转移后撤销；动态码生成规则不变。</text>
+      <button class="button-primary" bindtap="confirmTransfer" loading="{{transferring}}" disabled="{{transferLoading || transferring || !targetTeamId}}">{{transferring ? '正在转移' : '转移到所选团队'}}</button>
+    </view>
+  </view>
 </view>

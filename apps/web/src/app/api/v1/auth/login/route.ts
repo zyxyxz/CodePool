@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     };
     const teams = db
       .prepare(
-        `SELECT t.id AS teamId, t.name, t.slug, tm.role, t.owner_id AS ownerId,
+        `SELECT t.id AS teamId, t.name, t.slug, tm.role, t.owner_id AS ownerId, t.theme_color AS themeColor,
          t.created_at AS createdAt FROM teams t JOIN team_members tm ON tm.team_id = t.id
          WHERE tm.user_id = ? AND t.status = 'active'
          AND (tm.expires_at IS NULL OR datetime(tm.expires_at) > CURRENT_TIMESTAMP)

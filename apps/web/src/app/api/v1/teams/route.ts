@@ -6,13 +6,14 @@ import { created, fail, jsonBody, ok } from "@/server/api";
 import { requireMember } from "@/server/auth";
 import { db } from "@/server/db";
 import { assertCanCreateTeam } from "@/server/quota";
+import { DEFAULT_TEAM_THEME_COLOR, teamNameSchema, teamThemeColorSchema } from "@/server/teams";
 
 export async function GET(request: NextRequest) {
   try {
     const { userId } = await requireMember(request);
     const teams = db
       .prepare(
-        `SELECT t.id AS teamId, t.name, t.slug, t.owner_id AS ownerId, tm.role,
+        `SELECT t.id AS teamId, t.name, t.slug, t.owner_id AS ownerId, tm.role, t.theme_color AS themeColor,
          t.created_at AS createdAt,
          (SELECT COUNT(*) FROM team_members x JOIN users member_u ON member_u.id = x.user_id
           WHERE x.team_id = t.id AND member_u.status = 'active'
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await requireMember(request);
-    const input = z.object({ name: z.string().trim().min(2).max(48) }).parse(await jsonBody(request));
+    const input = z.object({ name: teamNameSchema, themeColor: teamThemeColorSchema.default(DEFAULT_TEAM_THEME_COLOR) }).strict().parse(await jsonBody(request));
     const session = await requireMember(request);
     const userId = session.userId;
     const teamId = randomUUID();
@@ -44,11 +45,12 @@ export async function POST(request: NextRequest) {
         .get(userId, session.sessionVersion);
       if (!activeSession) throw new Error("UNAUTHORIZED");
       assertCanCreateTeam(userId);
-      db.prepare("INSERT INTO teams (id, name, slug, owner_id) VALUES (?, ?, ?, ?)").run(
+      db.prepare("INSERT INTO teams (id, name, slug, owner_id, theme_color) VALUES (?, ?, ?, ?, ?)").run(
         teamId,
         input.name,
         slug,
         userId,
+        input.themeColor,
       );
       db.prepare("INSERT INTO team_members(team_id, user_id, role) VALUES (?, ?, 'owner')").run(
         teamId,
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
     });
     operation.immediate();
     audit({ request, teamId, actorId: userId, action: "TEAM_CREATE", targetType: "team", targetId: teamId });
-    return created({ teamId, name: input.name, slug, ownerId: userId, role: "owner" });
+    return created({ teamId, name: input.name, slug, ownerId: userId, role: "owner", themeColor: input.themeColor });
   } catch (error) {
     return fail(error);
   }

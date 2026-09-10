@@ -1,7 +1,7 @@
 <view class="page">
   <view class="offline-bar" wx:if="{{offline}}">当前处于离线状态</view>
 
-  <view class="card login-card" wx:if="{{needsLogin}}">
+  <form class="card login-card" wx:if="{{needsLogin}}" bindsubmit="handleLogin">
     <text class="login-title">登录后管理团队</text>
     <text class="login-desc">登录只用于验证团队身份和记录必要的安全操作。</text>
     <view class="avatar-picker">
@@ -11,10 +11,10 @@
       </button>
       <button class="avatar-alternate" disabled="{{loginLoading || avatarProcessing}}" bindtap="handleChooseAvatarFallback">相册 / 相机</button>
     </view>
-    <input class="input nickname-input" type="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || avatarProcessing || nicknameReviewInFlight}}" bindinput="handleNicknameInput" bindblur="handleNicknameBlur" bindnicknamereview="handleNicknameReview" />
+    <input class="input nickname-input" type="nickname" name="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || avatarProcessing}}" bindnicknamereview="handleNicknameReview" />
     <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="#15803D" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
-    <button class="button-primary" loading="{{loginLoading}}" disabled="{{loginLoading || avatarProcessing || !legalConsent}}" bindtap="handleLogin">微信快捷登录</button>
-  </view>
+    <button class="button-primary" form-type="submit" loading="{{loginLoading}}" disabled="{{loginLoading || avatarProcessing || !legalConsent}}">微信快捷登录</button>
+  </form>
 
   <block wx:if="{{!needsLogin}}">
     <view class="team-header">
@@ -48,7 +48,11 @@
     </view>
 
     <block wx:else>
-      <view class="workspace-card">
+      <view class="workspace-card" style="background: linear-gradient(135deg, {{currentTeam.themeColor}} 0%, #101820 100%);">
+        <view class="workspace-card-top">
+          <text>当前团队空间</text>
+          <button class="workspace-edit" wx:if="{{canManage}}" bindtap="handleEditTeam" aria-label="编辑团队名称和主题色">编辑</button>
+        </view>
         <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
           <view class="workspace-picker">
             <view>
@@ -59,25 +63,27 @@
           </view>
         </picker>
         <view class="workspace-actions">
-          <button class="button-secondary" wx:if="{{canManage}}" loading="{{inviteCreating}}" bindtap="handleInvite">创建邀请</button>
+          <button class="button-secondary" wx:if="{{canManage}}" loading="{{inviteCreating}}" disabled="{{inviteCreating}}" bindtap="handleInvite">邀请成员</button>
           <button class="button-ghost" bindtap="handleAcceptInvite">加入团队</button>
         </view>
       </view>
 
-      <view class="card invite-ready" wx:if="{{inviteToken}}">
-        <view>
-          <text class="invite-title">{{inviteRoleLabel}}邀请已就绪</text>
-          <text class="invite-desc">有效至 {{inviteExpiresText}}，邀请码只能使用一次。</text>
-        </view>
+      <view class="card invite-ready {{inviteUsable ? '' : 'invite-inactive'}}" wx:if="{{inviteToken}}">
+        <view class="invite-ready-head"><text class="invite-title">邀请加入 {{currentTeam.name}}</text><text class="invite-status {{inviteUsable ? 'active' : ''}}">{{inviteStatusText}}</text></view>
+        <text class="invite-desc">{{inviteRoleLabel}}权限 · 有效至 {{inviteExpiresText}}</text>
+        <view class="invite-code-box"><text class="invite-code-label">邀请码</text><text class="invite-code" selectable="true" user-select="true">{{inviteToken}}</text></view>
+        <text class="invite-desc">每个邀请码仅可领取一次，请发送给你信任的队友。</text>
         <view class="invite-actions">
-          <button class="button-primary button-small" open-type="share">微信转发</button>
-          <button class="button-ghost button-small" bindtap="handleCopyInvite">复制邀请码</button>
+          <button class="button-primary button-small" open-type="share" wx:if="{{inviteUsable}}">微信分享</button>
+          <button class="button-primary button-small" wx:else bindtap="handleInvite">重新生成</button>
+          <button class="button-ghost button-small" disabled="{{!inviteUsable || inviteCopying}}" loading="{{inviteCopying}}" bindtap="handleCopyInvite">复制邀请码</button>
         </view>
       </view>
 
+      <view class="team-data-error" wx:if="{{teamDataError}}"><text>{{teamDataError}}</text><button bindtap="loadTeamData" disabled="{{teamDataLoading}}">重试</button></view>
       <view class="section-head"><text>团队成员</text><text>{{members.length}} 位</text></view>
       <view class="card member-list">
-        <view class="empty-list" wx:if="{{!members.length}}">正在等待成员加入</view>
+        <view class="empty-list" wx:if="{{!members.length}}">{{teamDataLoading ? '正在同步成员…' : teamDataError ? '成员信息暂未加载' : '正在等待成员加入'}}</view>
         <block wx:for="{{members}}" wx:key="userId">
           <view class="member-row">
             <image class="avatar" src="{{item.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
@@ -95,7 +101,7 @@
       <block wx:if="{{canManage}}">
         <view class="section-head"><text>最近邀请</text><text>{{invites.length}} 条</text></view>
         <view class="card invite-list">
-          <view class="empty-list" wx:if="{{!invites.length}}">没有进行中的邀请</view>
+          <view class="empty-list" wx:if="{{!invites.length}}">{{teamDataLoading ? '正在同步邀请…' : teamDataError ? '邀请信息暂未加载' : '暂无邀请记录'}}</view>
           <block wx:for="{{invites}}" wx:key="id">
             <view class="invite-row">
               <view><text class="invite-role">{{item.roleLabel}}</text><text class="invite-time">有效至 {{item.expiresText}}</text></view>
@@ -108,4 +114,44 @@
       <view class="safe-note">权限变更会立即影响访问并写入审计。所有者不可被移除或降级；访客仅可查看。</view>
     </block>
   </block>
+
+  <view class="sheet-mask" wx:if="{{teamEditorOpen}}" bindtap="handleCloseTeamEditor" catchtouchmove="handleSheetTap">
+    <form class="sheet" catchtap="handleSheetTap" bindsubmit="handleSaveTeam">
+      <view class="sheet-heading"><view><text class="sheet-title">编辑团队</text><text class="sheet-desc">名称和主题色会对团队所有成员生效。</text></view><button class="sheet-close" bindtap="handleCloseTeamEditor" disabled="{{teamSaving}}" aria-label="关闭编辑团队">×</button></view>
+      <text class="field-label">团队名称</text>
+      <input class="input team-name-input" name="teamName" value="{{teamNameDraft}}" maxlength="48" placeholder="输入 2-48 个字符" disabled="{{teamSaving}}" bindinput="handleTeamNameInput" />
+      <text class="field-label">主题色</text>
+      <view class="theme-options">
+        <button wx:for="{{themeColors}}" wx:key="value" class="theme-option {{teamColorDraft === item.value ? 'selected' : ''}}" data-color="{{item.value}}" bindtap="handleThemeChange" disabled="{{teamSaving}}" aria-label="{{item.label}}{{teamColorDraft === item.value ? '，已选择' : ''}}"><view class="theme-dot" style="background: {{item.value}};"><text wx:if="{{teamColorDraft === item.value}}">✓</text></view><text>{{item.label}}</text></button>
+      </view>
+      <view class="theme-preview" style="background: linear-gradient(135deg, {{teamColorDraft}} 0%, #101820 100%);"><text>团队空间预览</text><text class="preview-name">{{teamNameDraft || '团队名称'}}</text></view>
+      <text class="sheet-error" wx:if="{{teamEditError}}">{{teamEditError}}</text>
+      <button class="button-primary sheet-submit" form-type="submit" loading="{{teamSaving}}" disabled="{{teamSaving}}">保存设置</button>
+    </form>
+  </view>
+
+  <view class="sheet-mask" wx:if="{{inviteComposerOpen}}" bindtap="handleCloseInviteComposer" catchtouchmove="handleSheetTap">
+    <view class="sheet" catchtap="handleSheetTap">
+      <view class="sheet-heading"><view><text class="sheet-title">邀请队友</text><text class="sheet-desc">加入 {{currentTeam.name}}</text></view><button class="sheet-close" bindtap="handleCloseInviteComposer" disabled="{{inviteCreating}}" aria-label="关闭邀请设置">×</button></view>
+      <text class="field-label">加入后的权限</text>
+      <view class="role-options">
+        <button wx:for="{{inviteRoles}}" wx:key="value" class="role-option {{selectedInviteRole === item.value ? 'selected' : ''}}" data-role="{{item.value}}" bindtap="handleInviteRoleChange" disabled="{{inviteCreating}}"><view><text class="role-option-title">{{item.label}}</text><text class="role-option-desc">{{item.help}}</text></view><text class="option-check">{{selectedInviteRole === item.value ? '✓' : ''}}</text></button>
+      </view>
+      <text class="field-label">邀请码有效期</text>
+      <view class="duration-options"><button wx:for="{{inviteDurations}}" wx:key="hours" class="duration-option {{selectedInviteHours === item.hours ? 'selected' : ''}}" data-hours="{{item.hours}}" bindtap="handleInviteDurationChange" disabled="{{inviteCreating}}">{{item.label}}</button></view>
+      <text class="sheet-hint">生成后可直接分享到微信，也可以复制邀请码。</text>
+      <text class="sheet-error" wx:if="{{inviteError}}">{{inviteError}}</text>
+      <button class="button-primary sheet-submit" bindtap="handleGenerateInvite" loading="{{inviteCreating}}" disabled="{{inviteCreating}}">生成邀请码</button>
+    </view>
+  </view>
+
+  <view class="sheet-mask" wx:if="{{joinOpen}}" bindtap="handleCloseJoin" catchtouchmove="handleSheetTap">
+    <form class="sheet" catchtap="handleSheetTap" bindsubmit="handleJoinTeam">
+      <view class="sheet-heading"><view><text class="sheet-title">加入团队</text><text class="sheet-desc">填写队友发来的邀请码，验证后加入。</text></view><button class="sheet-close" bindtap="handleCloseJoin" disabled="{{joinLoading || joinPasting}}" aria-label="关闭加入团队">×</button></view>
+      <view class="join-field-label"><text class="field-label">邀请码</text><button class="paste-button" bindtap="handlePasteJoin" loading="{{joinPasting}}" disabled="{{joinLoading || joinPasting}}">粘贴邀请码</button></view>
+      <input class="input join-code-input" name="inviteToken" value="{{joinToken}}" maxlength="256" placeholder="输入或粘贴完整邀请码" disabled="{{joinLoading || joinPasting}}" bindinput="handleJoinTokenInput" />
+      <text class="sheet-error" wx:if="{{joinError}}">{{joinError}}</text>
+      <button class="button-primary sheet-submit" form-type="submit" loading="{{joinLoading}}" disabled="{{joinLoading || joinPasting}}">验证并加入</button>
+    </form>
+  </view>
 </view>

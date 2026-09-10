@@ -16,5 +16,11 @@
   },
   "compileType": "miniprogram",
   "libVersion": "2.33.0",
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": "tests" },
+      { "type": "file", "value": "README.md" }
+    ]
+  },
   "condition": {}
 }

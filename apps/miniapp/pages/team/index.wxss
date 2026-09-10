@@ -137,25 +137,34 @@
 }
 
 .workspace-picker {
-  padding: 32rpx;
+  padding: 12rpx 32rpx 28rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .workspace-picker > text {
-  color: #7ce79d;
+  flex: none;
+  margin-left: 18rpx;
+  color: #ffffff;
   font-size: 23rpx;
+}
+
+.workspace-picker > view,
+.sheet-heading > view {
+  flex: 1;
+  min-width: 0;
 }
 
 .workspace-name {
   font-size: 34rpx;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .workspace-meta {
   margin-top: 8rpx;
-  color: #9eaaa3;
+  color: rgba(255, 255, 255, 0.78);
   font-size: 21rpx;
 }
 
@@ -167,6 +176,29 @@
   border-top: 1rpx solid rgba(255, 255, 255, 0.1);
 }
 
+.workspace-actions > button:only-child {
+  grid-column: 1 / -1;
+}
+
+.workspace-card-top {
+  padding: 20rpx 26rpx 0 32rpx;
+  min-height: 76rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 21rpx;
+}
+
+.workspace-edit {
+  min-height: 60rpx;
+  padding: 10rpx 18rpx;
+  border-radius: 10rpx;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 22rpx;
+}
+
 .invite-ready {
   margin-top: 22rpx;
   border-color: #b7ddc1;
@@ -176,6 +208,8 @@
 .invite-title {
   font-size: 29rpx;
   font-weight: 680;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .invite-desc {
@@ -188,6 +222,79 @@
   margin-top: 20rpx;
   display: flex;
   gap: 12rpx;
+}
+
+.invite-actions > button {
+  flex: 1;
+}
+
+.invite-ready-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14rpx;
+}
+
+.invite-ready-head .invite-status {
+  flex: none;
+}
+
+.invite-code-box {
+  margin-top: 22rpx;
+  padding: 20rpx;
+  border: 1rpx solid #d7e8db;
+  border-radius: 12rpx;
+  background: #ffffff;
+}
+
+.invite-code-label,
+.invite-code {
+  display: block;
+}
+
+.invite-code-label {
+  margin-bottom: 8rpx;
+  color: #718078;
+  font-size: 20rpx;
+}
+
+.invite-code {
+  color: #20382a;
+  font-family: Menlo, Consolas, monospace;
+  font-size: 27rpx;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.invite-inactive {
+  background: #f5f7f6;
+  border-color: #dfe6e1;
+}
+
+.invite-inactive .invite-code {
+  color: #859089;
+}
+
+.team-data-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-top: 22rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 12rpx;
+  background: #fff4dc;
+  color: #7a4d00;
+  font-size: 22rpx;
+}
+
+.team-data-error button {
+  flex: none;
+  min-height: 56rpx;
+  padding: 10rpx 16rpx;
+  background: transparent;
+  color: #7a4d00;
+  font-size: 22rpx;
 }
 
 .section-head {
@@ -316,4 +423,238 @@
 
 .safe-note {
   margin-top: 22rpx;
+}
+
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  padding: 24rpx;
+  background: rgba(10, 23, 15, 0.46);
+}
+
+.sheet {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 30rpx;
+  padding-bottom: calc(30rpx + env(safe-area-inset-bottom));
+  border-radius: 24rpx;
+  background: #ffffff;
+}
+
+.sheet-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
+}
+
+.sheet-title,
+.sheet-desc,
+.field-label,
+.sheet-hint,
+.sheet-error {
+  display: block;
+}
+
+.sheet-title {
+  font-size: 34rpx;
+  font-weight: 730;
+}
+
+.sheet-desc {
+  margin-top: 8rpx;
+  color: #718078;
+  font-size: 23rpx;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.sheet-close {
+  flex: none;
+  width: 60rpx;
+  min-height: 60rpx;
+  padding: 0;
+  border-radius: 12rpx;
+  background: #f0f4f1;
+  color: #65756b;
+  font-size: 36rpx;
+}
+
+.field-label {
+  margin: 24rpx 0 14rpx;
+  color: #34493c;
+  font-size: 24rpx;
+  font-weight: 650;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6rpx;
+}
+
+.theme-option {
+  min-width: 0;
+  min-height: 112rpx;
+  padding: 10rpx 2rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  border: 2rpx solid transparent;
+  border-radius: 12rpx;
+  background: transparent;
+  color: #718078;
+  font-size: 19rpx;
+}
+
+.theme-option.selected {
+  border-color: #d7e1db;
+  background: #f4f7f5;
+  color: #17231d;
+}
+
+.theme-dot {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 28rpx;
+}
+
+.theme-preview {
+  padding: 24rpx;
+  margin-top: 22rpx;
+  border-radius: 14rpx;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 20rpx;
+}
+
+.preview-name {
+  display: block;
+  margin-top: 12rpx;
+  color: #ffffff;
+  font-size: 30rpx;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.role-options {
+  display: grid;
+  gap: 10rpx;
+}
+
+.role-option {
+  padding: 18rpx 22rpx;
+  justify-content: space-between;
+  gap: 12rpx;
+  border: 2rpx solid #e4ebe6;
+  border-radius: 12rpx;
+  background: #ffffff;
+  text-align: left;
+}
+
+.role-option.selected {
+  background: #f0f9f3;
+  border-color: #7ebd92;
+}
+
+.role-option-title,
+.role-option-desc {
+  display: block;
+}
+
+.role-option-title {
+  color: #20382a;
+  font-size: 26rpx;
+  font-weight: 650;
+}
+
+.role-option-desc {
+  margin-top: 6rpx;
+  color: #718078;
+  font-size: 21rpx;
+  font-weight: 400;
+}
+
+.option-check {
+  flex: none;
+  width: 34rpx;
+  color: #15803d;
+  font-size: 28rpx;
+}
+
+.duration-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12rpx;
+}
+
+.duration-option {
+  min-height: 72rpx;
+  padding: 12rpx 4rpx;
+  border: 2rpx solid #e4ebe6;
+  border-radius: 12rpx;
+  background: #ffffff;
+  color: #5f6f65;
+  font-size: 23rpx;
+}
+
+.duration-option.selected {
+  background: #f0f9f3;
+  border-color: #7ebd92;
+  color: #166534;
+}
+
+.sheet-hint {
+  margin-top: 20rpx;
+  color: #718078;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
+.sheet-error {
+  margin-top: 20rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 10rpx;
+  background: #fff1ee;
+  color: #b42318;
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
+.sheet-submit {
+  width: 100%;
+  margin-top: 28rpx;
+}
+
+.join-field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.join-field-label .field-label {
+  margin: 0;
+}
+
+.paste-button {
+  min-height: 68rpx;
+  padding: 12rpx 0 12rpx 18rpx;
+  color: #15803d;
+  background: transparent;
+  font-size: 23rpx;
+}
+
+.join-code-input {
+  font-family: Menlo, Consolas, monospace;
+  font-size: 24rpx;
 }

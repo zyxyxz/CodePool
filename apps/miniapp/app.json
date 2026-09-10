@@ -4,6 +4,7 @@
     "pages/team/index",
     "pages/logs/index",
     "pages/profile/index",
+    "pages/settings/index",
     "pages/item/add/index",
     "pages/item/detail/index",
     "pages/account/add/index",

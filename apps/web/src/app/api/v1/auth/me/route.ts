@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     if (!user) throw new Error("UNAUTHORIZED");
     const teams = db
       .prepare(
-        `SELECT t.id AS teamId, t.name, t.slug, t.owner_id AS ownerId, tm.role,
+        `SELECT t.id AS teamId, t.name, t.slug, t.owner_id AS ownerId, tm.role, t.theme_color AS themeColor,
          tm.expires_at AS expiresAt, t.created_at AS createdAt
          FROM teams t JOIN team_members tm ON tm.team_id = t.id
          WHERE tm.user_id = ? AND t.status = 'active'

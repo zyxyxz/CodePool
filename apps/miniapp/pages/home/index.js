@@ -1,4 +1,6 @@
 const api = require('../../utils/api');
+const { copyText } = require('../../utils/clipboard');
+const { submittedNickname, notifyNicknameReview } = require('../../utils/nickname');
 const {
   KIND_LABELS,
   ROLE_LABELS,
@@ -33,8 +35,6 @@ Page({
     needsLogin: false,
     loginLoading: false,
     avatarProcessing: false,
-    nicknameReviewPending: false,
-    nicknameReviewInFlight: false,
     loginProfile: defaultProfile(),
     legalConsent: app.hasLegalConsent ? app.hasLegalConsent() : false,
     teams: [],
@@ -55,7 +55,6 @@ Page({
 
   onLoad(options) {
     app.captureInvite(options);
-    this._approvedNickname = this.data.loginProfile.nickname;
     this._codeRefreshing = {};
     this._hideTimers = {};
     this._networkHandler = ({ isConnected }) => {
@@ -100,7 +99,6 @@ Page({
     if (!hasSession) {
       this.clearTicker();
       const loginProfile = defaultProfile();
-      this._approvedNickname = loginProfile.nickname;
       this.setData({
         loading: false,
         needsLogin: true,
@@ -110,8 +108,6 @@ Page({
         visibleAccounts: [],
         visibleVaultItems: [],
         loginProfile,
-        nicknameReviewPending: false,
-        nicknameReviewInFlight: false,
         legalConsent: app.hasLegalConsent ? app.hasLegalConsent() : false,
       });
       return;
@@ -255,20 +251,16 @@ Page({
     }
   },
 
-  async handleLogin() {
-    if (this.data.loginLoading) return;
-    if (this.data.nicknameReviewPending) {
-      wx.showToast({ title: '请等待昵称安全审核完成', icon: 'none' });
-      return;
-    }
+  async handleLogin(e) {
+    if (this.data.loginLoading || this.data.avatarProcessing) return;
     if (!this.data.legalConsent) {
       wx.showToast({ title: '请先勾选同意隐私政策和用户协议', icon: 'none' });
       return;
     }
-    const nickname = (this.data.loginProfile.nickname || '').trim();
-    app.setStoredProfile({ ...this.data.loginProfile, nickname: nickname || 'CodePool 用户' });
     this.setData({ loginLoading: true });
     try {
+      const nickname = submittedNickname(e);
+      app.setStoredProfile({ ...this.data.loginProfile, nickname });
       await app.ensureLogin(true);
       this.setData({ needsLogin: false });
       await this.bootstrap();
@@ -279,41 +271,7 @@ Page({
     }
   },
 
-  handleNicknameInput(e) {
-    const nickname = e.detail.value;
-    this.setData({
-      'loginProfile.nickname': nickname,
-      nicknameReviewPending: nickname.trim() !== String(this._approvedNickname || '').trim(),
-    });
-  },
-
-  handleNicknameBlur() {
-    const nickname = this.data.loginProfile.nickname;
-    if (nickname.trim() === String(this._approvedNickname || '').trim()) {
-      this.setData({ nicknameReviewPending: false, nicknameReviewInFlight: false });
-      return;
-    }
-    this._reviewedNickname = nickname;
-    this.setData({ nicknameReviewPending: true, nicknameReviewInFlight: true });
-  },
-
-  handleNicknameReview(e) {
-    const reviewedNickname = this._reviewedNickname;
-    if (!reviewedNickname || reviewedNickname !== this.data.loginProfile.nickname) {
-      this.setData({ nicknameReviewInFlight: false });
-      return;
-    }
-    if (e.detail && e.detail.pass === true) {
-      this._approvedNickname = reviewedNickname;
-      this._reviewedNickname = '';
-      this.setData({ nicknameReviewPending: false, nicknameReviewInFlight: false });
-      return;
-    }
-    const nickname = this._approvedNickname || defaultProfile().nickname;
-    this._reviewedNickname = '';
-    this.setData({ 'loginProfile.nickname': nickname, nicknameReviewPending: false, nicknameReviewInFlight: false });
-    wx.showToast({ title: e.detail && e.detail.timeout ? '昵称审核超时，请重新输入' : '昵称未通过微信安全审核', icon: 'none' });
-  },
+  handleNicknameReview: notifyNicknameReview,
 
   async storeChosenAvatar(tempFilePath) {
     const avatarUrl = await app.persistAvatarFile(tempFilePath);
@@ -476,7 +434,10 @@ Page({
     const account = this.data.accounts.find((item) => item.id === id);
     if (!account) return;
     const code = account.code || await this.fetchCode(id, true);
-    if (code) wx.setClipboardData({ data: code });
+    if (code) {
+      try { await copyText(code, { successMessage: '动态码已复制' }); }
+      catch (error) { wx.showToast({ title: friendlyError(error, '复制失败'), icon: 'none' }); }
+    }
   },
 
   goAccountDetail(e) {

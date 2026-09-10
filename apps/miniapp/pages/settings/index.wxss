@@ -1,0 +1,16 @@
+.about-header { padding: 32rpx 0 20rpx; display: flex; align-items: center; flex-direction: column; }
+.brand-mark { width: 100rpx; height: 100rpx; display: flex; align-items: center; justify-content: center; border-radius: 24rpx; background: #15803d; color: #fff; font-size: 36rpx; font-weight: 750; }
+.app-name { margin-top: 18rpx; color: #17241c; font-size: 36rpx; font-weight: 750; }
+.app-desc,.app-version { margin-top: 8rpx; color: #718078; font-size: 23rpx; }
+.app-version { font-size: 21rpx; }
+.section-label { margin: 28rpx 8rpx 14rpx; color: #66736b; font-size: 23rpx; font-weight: 650; }
+.menu-card { padding-top: 0; padding-bottom: 0; }
+.menu-row { min-height: 108rpx; padding: 12rpx 0; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; border-bottom: 1rpx solid #edf1ee; }
+.menu-row:last-child { border-bottom: 0; }
+.menu-row:active { opacity: .65; }
+.menu-row > view { min-width: 0; }
+.menu-title,.menu-desc { display: block; }
+.menu-title { color: #17241c; font-size: 27rpx; font-weight: 630; }
+.menu-desc { margin-top: 6rpx; color: #89958e; font-size: 21rpx; line-height: 1.5; word-break: break-all; }
+.arrow { flex: none; color: #89958e; font-size: 36rpx; }
+.logout-button { width: 100%; margin-top: 26rpx; }

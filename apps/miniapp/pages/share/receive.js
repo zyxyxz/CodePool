@@ -1,4 +1,5 @@
 const api = require('../../utils/api');
+const { copyText } = require('../../utils/clipboard');
 const {
   KIND_LABELS,
   formatDate,
@@ -186,7 +187,10 @@ Page({
       confirmText: '复制',
       confirmColor: '#15803D',
     });
-    if (confirm.confirm) wx.setClipboardData({ data: this._plainContent });
+    if (confirm.confirm) {
+      try { await copyText(this._plainContent); }
+      catch (error) { wx.showToast({ title: friendlyError(error, '复制失败'), icon: 'none' }); }
+    }
   },
 
   handleRetry() {

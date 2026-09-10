@@ -27,6 +27,10 @@
   gap: 20rpx;
 }
 
+.service-heading { flex: 1; min-width: 0; word-break: break-all; }
+.card-tools { display: flex; align-items: center; gap: 12rpx; flex: none; }
+.more-button { width: 68rpx; height: 68rpx; min-height: 68rpx; padding: 0; border-radius: 12rpx; background: #25352c; color: #fff; font-size: 36rpx; }
+
 .service,
 .label,
 .code,
@@ -203,11 +207,22 @@
 .share-side { display: flex; align-items: center; gap: 12rpx; }
 .revoke-share { min-height: 60rpx; padding: 10rpx 16rpx; border-radius: 14rpx; background: #fff1f0; color: #b42318; font-size: 21rpx; }
 
-.delete-button {
-  width: 100%;
-  margin-top: 12rpx;
-}
-
 .safe-note {
   margin-top: 22rpx;
 }
+
+.sheet-mask { position: fixed; inset: 0; z-index: 100; background: rgba(10, 20, 14, .48); display: flex; align-items: flex-end; }
+.transfer-sheet { width: 100%; max-height: 86vh; overflow-y: auto; padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom)); border-radius: 24rpx 24rpx 0 0; background: #fff; }
+.sheet-header { display: flex; justify-content: space-between; align-items: center; }
+.sheet-close { width: 68rpx; min-height: 68rpx; padding: 0; background: #f0f4f1; border-radius: 12rpx; font-size: 36rpx; }
+.transfer-desc, .transfer-note { display: block; color: #718078; font-size: 24rpx; line-height: 1.6; margin: 18rpx 0; }
+.transfer-search { margin: 20rpx 0; }
+.transfer-list { max-height: 38vh; }
+.transfer-team { width: 100%; display: flex; justify-content: space-between; text-align: left; padding: 22rpx; margin: 12rpx 0; border-radius: 12rpx; border: 2rpx solid #e3ebe6; background: #f8faf9; }
+.transfer-team.selected { border-color: #15803d; background: #edf8f0; }
+.transfer-team > view { flex: 1; min-width: 0; }
+.transfer-team-name { display: block; font-size: 28rpx; font-weight: 650; word-break: break-all; }
+.transfer-team-meta { display: block; color: #718078; margin-top: 8rpx; font-size: 22rpx; }
+.transfer-check { flex: none; margin-left: 20rpx; color: #15803d; }
+.transfer-state { padding: 32rpx 0; font-size: 26rpx; line-height: 1.7; color: #718078; }
+.transfer-error { padding: 22rpx; background: #fff1f0; border-radius: 12rpx; color: #b42318; font-size: 24rpx; line-height: 1.6; }
