@@ -1,4 +1,4 @@
-<view class="page">
+<view class="page" style="{{themeStyle}}">
   <view class="share-header">
     <view class="brand-mark">CP</view>
     <text class="eyebrow">SECURE SHARE</text>
@@ -31,7 +31,7 @@
       <view class="content-box {{contentVisible ? 'visible' : ''}}">
         <text selectable="{{contentVisible}}">{{displayContent}}</text>
       </view>
-      <progress wx:if="{{payload.kind === 'totp'}}" percent="{{codeProgress}}" stroke-width="4" activeColor="#15803D" backgroundColor="#DDE8E0" />
+      <progress wx:if="{{payload.kind === 'totp'}}" percent="{{codeProgress}}" stroke-width="4" activeColor="{{theme.accent}}" backgroundColor="{{theme.border}}" />
       <text class="totp-warning" wx:if="{{payload.kind === 'totp'}}">{{codeExpiresIn > 0 ? codeExpiresIn + ' 秒后失效' : '动态码已失效，分享无法再次领取'}}</text>
       <view class="result-actions"><button class="button-secondary" bindtap="handleToggleContent">{{contentVisible ? '立即隐藏' : '显示内容'}}</button><button class="button-primary" bindtap="handleCopy">复制</button></view>
     </view>

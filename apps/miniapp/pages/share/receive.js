@@ -1,4 +1,5 @@
 const api = require('../../utils/api');
+const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../utils/theme');
 const { copyText } = require('../../utils/clipboard');
 const {
   KIND_LABELS,
@@ -35,6 +36,7 @@ function tokenFromOptions(options) {
 
 Page({
   data: {
+    ...getThemeData(),
     token: '',
     preview: null,
     payload: null,
@@ -46,6 +48,10 @@ Page({
     displayContent: MASK_TEXT,
     codeExpiresIn: 0,
     codeProgress: 100,
+  },
+
+  onShow() {
+    applyPageTheme(this, getActiveThemeColor(app));
   },
 
   onLoad(options) {
@@ -91,7 +97,7 @@ Page({
       title: '确认领取安全分享？',
       content: `领取「${preview.title || '安全内容'}」将消耗一次可领取次数。请确认当前环境安全，领取后不要截图或转发正文。`,
       confirmText: '确认领取',
-      confirmColor: '#15803D',
+      confirmColor: this.data.theme.accent,
     });
     if (!confirm.confirm) return;
     this.setData({ claiming: true, error: '' });
@@ -185,7 +191,7 @@ Page({
       title: '复制到剪贴板？',
       content: '系统剪贴板可能被其他应用读取。请仅粘贴到可信目标，并在使用后及时覆盖。',
       confirmText: '复制',
-      confirmColor: '#15803D',
+      confirmColor: this.data.theme.accent,
     });
     if (confirm.confirm) {
       try { await copyText(this._plainContent); }

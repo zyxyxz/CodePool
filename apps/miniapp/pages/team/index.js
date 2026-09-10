@@ -1,7 +1,7 @@
 const api = require('../../utils/api');
 const { submittedNickname, notifyNicknameReview } = require('../../utils/nickname');
 const { copyText, readClipboard } = require('../../utils/clipboard');
-const { TEAM_COLORS, normalizeThemeColor } = require('../../utils/theme');
+const { TEAM_COLORS, normalizeThemeColor, getTheme, getThemeStyle, getThemeData, getActiveThemeColor, applyPageTheme } = require('../../utils/theme');
 const {
   ROLE_LABELS,
   formatDate,
@@ -10,9 +10,10 @@ const {
 } = require('../../utils/format');
 
 const app = getApp();
-const THEME_COLORS = TEAM_COLORS.map((value, index) => ({
-  value, label: ['森林绿', '晴空蓝', '鸢尾紫', '玫瑰粉', '暖橙', '湖水青'][index],
-}));
+const THEME_COLORS = TEAM_COLORS.map((value) => {
+  const theme = getTheme(value);
+  return { value, label: theme.label, accent: theme.accent, swatch: theme.tint, tint: theme.tint, bg: theme.bg };
+});
 const INVITE_ROLES = [
   { value: 'member', label: '成员', help: '可创建、查看和分享内容' },
   { value: 'guest', label: '访客', help: '仅可查看团队内容' },
@@ -46,6 +47,7 @@ function defaultProfile() {
 
 Page({
   data: {
+    ...getThemeData(),
     loading: true,
     error: '',
     offline: false,
@@ -80,6 +82,8 @@ Page({
     teamSaving: false,
     teamNameDraft: '',
     teamColorDraft: '#15803D',
+    teamPreviewTheme: getTheme(),
+    teamPreviewStyle: getThemeStyle(),
     teamEditError: '',
     themeColors: THEME_COLORS,
     joinOpen: false,
@@ -90,6 +94,15 @@ Page({
   },
 
   async onShow() {
+    const teams = app.globalData.teams || [];
+    const teamIndex = teams.findIndex((entry) => entry.teamId === app.globalData.activeTeamId);
+    const currentTeam = teams[teamIndex] || null;
+    if ((this.data.currentTeam && this.data.currentTeam.teamId) !== (currentTeam && currentTeam.teamId)) {
+      this._teamDataSequence = (this._teamDataSequence || 0) + 1;
+      this.clearInviteExpiryTimer();
+      this.setData({ teams, teamIndex: Math.max(0, teamIndex), currentTeam, members: [], invites: [], inviteToken: '', inviteUsable: false, teamEditorOpen: false, inviteComposerOpen: false, loading: true });
+    }
+    applyPageTheme(this, getActiveThemeColor(app));
     await this.initialize();
   },
 
@@ -156,7 +169,7 @@ Page({
       let teamIndex = teams.findIndex((team) => team.teamId === app.globalData.activeTeamId);
       if (teamIndex < 0) teamIndex = 0;
       const currentTeam = teams[teamIndex] || null;
-      if (currentTeam) app.setActiveTeam(currentTeam.teamId);
+      app.setActiveTeam(currentTeam ? currentTeam.teamId : null);
       const canManage = Boolean(currentTeam && (currentTeam.role === 'owner' || currentTeam.role === 'admin'));
       this.setData({
         teams,
@@ -168,6 +181,7 @@ Page({
         error: '',
         offline: false,
       });
+      applyPageTheme(this, currentTeam ? currentTeam.themeColor : null);
       this.applyGeneratedInvite();
       await this.loadTeamData();
     } catch (error) {
@@ -248,7 +262,8 @@ Page({
       teamEditorOpen: false,
       inviteComposerOpen: false,
     }, () => {
-      if (currentTeam) app.setActiveTeam(currentTeam.teamId);
+      app.setActiveTeam(currentTeam ? currentTeam.teamId : null);
+      applyPageTheme(this, currentTeam ? currentTeam.themeColor : null);
       this.applyGeneratedInvite();
       this.loadTeamData();
     });
@@ -263,6 +278,8 @@ Page({
       teamEditorOpen: true,
       teamNameDraft: team.name,
       teamColorDraft: validThemeColor(team.themeColor),
+      teamPreviewTheme: getTheme(team.themeColor),
+      teamPreviewStyle: getThemeStyle(team.themeColor),
       teamEditError: '',
     });
   },
@@ -277,7 +294,8 @@ Page({
 
   handleThemeChange(e) {
     if (this.data.teamSaving) return;
-    this.setData({ teamColorDraft: validThemeColor(e.currentTarget.dataset.color) });
+    const color = validThemeColor(e.currentTarget.dataset.color);
+    this.setData({ teamColorDraft: color, teamPreviewTheme: getTheme(color), teamPreviewStyle: getThemeStyle(color) });
   },
 
   async handleSaveTeam(e) {
@@ -304,6 +322,8 @@ Page({
         ? teams.find((item) => item.teamId === team.teamId)
         : this.data.currentTeam;
       this.setData({ teams, currentTeam, teamEditorOpen: false, loading: false });
+      app.setActiveTeam(app.globalData.activeTeamId);
+      applyPageTheme(this, currentTeam ? currentTeam.themeColor : null);
       wx.showToast({ title: '团队设置已更新', icon: 'success' });
     } catch (error) {
       if (hasSameSession(userId)) this.setData({ teamEditError: friendlyError(error, '保存失败，请重试') });

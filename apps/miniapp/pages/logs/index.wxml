@@ -1,4 +1,4 @@
-<view class="page">
+<view class="page" style="{{themeStyle}}">
   <view class="offline-bar" wx:if="{{offline}}">当前处于离线状态</view>
 
   <view class="card state-card" wx:if="{{needsLogin}}">

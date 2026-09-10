@@ -1,4 +1,5 @@
 const api = require('../../utils/api');
+const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../utils/theme');
 const { CLIENT_VERSION } = require('../../config');
 const { formatDate, friendlyError } = require('../../utils/format');
 
@@ -24,6 +25,7 @@ const emptyDeletion = {
 
 Page({
   data: {
+    ...getThemeData(),
     loading: true,
     needsLogin: true,
     version: getVersion(),
@@ -32,6 +34,7 @@ Page({
   },
 
   async onShow() {
+    applyPageTheme(this, getActiveThemeColor(app));
     await app.awaitReady();
     const needsLogin = !app.globalData.token;
     this.setData({ loading: false, needsLogin, ...emptyDeletion });

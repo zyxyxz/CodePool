@@ -48,3 +48,18 @@ test('paste resolves callback data even when the native API returns no Promise',
   const clipboard = loadClipboard({ getClipboardData({ success }) { success({ data: 'JBSWY3DPEHPK3PXP' }); } });
   assert.equal(await clipboard.readClipboard(), 'JBSWY3DPEHPK3PXP');
 });
+
+test('copy does not write a previous workspace code after delayed privacy approval', async () => {
+  let approve;
+  let current = true;
+  const writes = [];
+  const clipboard = loadClipboard({
+    setClipboardData(options) { writes.push(options.data); options.success({}); },
+    showToast() { throw new Error('cancelled copy must not report success'); },
+  }, () => new Promise((resolve) => { approve = resolve; }));
+  const pending = clipboard.copyText('654321', { isCurrent: () => current });
+  current = false;
+  approve();
+  assert.equal(await pending, false);
+  assert.deepEqual(writes, []);
+});

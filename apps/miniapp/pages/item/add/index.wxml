@@ -1,4 +1,4 @@
-<view class="page">
+<view class="page" style="{{themeStyle}}">
   <view class="intro">
     <text class="eyebrow">{{editing ? 'EDIT SECURE ITEM' : 'NEW SECURE ITEM'}}</text>
     <text class="title">{{editing ? '编辑共享内容' : '放入团队代码池'}}</text>
@@ -66,7 +66,7 @@
         <textarea wx:else class="textarea content-input" maxlength="200000" placeholder="粘贴代码、口令或团队说明…" data-field="content" value="{{form.content}}" bindinput="handleInput" />
         <view class="content-foot">
           <view class="mask-switch" wx:if="{{kinds[kindIndex].value === 'secret'}}">
-            <switch color="#15803D" checked="{{maskContent}}" bindchange="handleMaskChange" />
+            <switch color="{{theme.accent}}" checked="{{maskContent}}" bindchange="handleMaskChange" />
             <text>输入时遮挡</text>
           </view>
           <text class="counter">{{contentLength}} / 200000</text>

@@ -1,6 +1,6 @@
 .intro {
   padding: 12rpx 8rpx 34rpx;
-  border-bottom: 1rpx solid #e1eae4;
+  border-bottom: 1rpx solid var(--cp-border);
 }
 
 .intro text {
@@ -8,21 +8,21 @@
 }
 
 .eyebrow {
-  color: #15803d;
+  color: var(--cp-accent);
   font-size: 20rpx;
-  font-weight: 750;
+  font-weight: 650;
   letter-spacing: 0;
 }
 
 .title {
   margin-top: 12rpx;
   font-size: 44rpx;
-  font-weight: 750;
+  font-weight: 650;
 }
 
 .desc {
   margin-top: 14rpx;
-  color: #718078;
+  color: var(--cp-muted);
   font-size: 24rpx;
   line-height: 1.6;
 }
@@ -33,10 +33,10 @@
   padding: 26rpx;
   justify-content: flex-start;
   gap: 20rpx;
-  border: 1rpx solid #b8ddc3;
-  border-radius: 14rpx;
-  background: #edf8f0;
-  color: #17231d;
+  border: 1rpx solid var(--cp-border);
+  border-radius: 20rpx;
+  background: var(--cp-tint);
+  color: var(--cp-ink);
   text-align: left;
 }
 
@@ -46,8 +46,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12rpx;
-  background: #15803d;
+  border-radius: 18rpx;
+  background: var(--cp-accent);
   color: #ffffff;
   font-size: 34rpx;
 }
@@ -64,13 +64,13 @@
 
 .scan-desc {
   margin-top: 6rpx;
-  color: #66736b;
+  color: var(--cp-muted);
   font-size: 21rpx;
 }
 
 .scan-arrow {
   margin-left: auto;
-  color: #15803d;
+  color: var(--cp-accent);
   font-size: 40rpx;
 }
 
@@ -80,7 +80,7 @@
 
 .field {
   padding-bottom: 26rpx;
-  border-bottom: 1rpx solid #edf1ee;
+  border-bottom: 1rpx solid var(--cp-border);
 }
 
 .field + .field {
@@ -100,13 +100,13 @@
 }
 
 .picker-value text:last-child {
-  color: #718078;
+  color: var(--cp-muted);
   font-size: 23rpx;
 }
 
 .picker-value.disabled {
-  background: #eff3f0;
-  color: #718078;
+  background: var(--cp-tint);
+  color: var(--cp-muted);
 }
 
 .remark-input {
@@ -120,9 +120,9 @@
 .inline-actions button {
   min-height: 58rpx;
   padding: 10rpx 16rpx;
-  border-radius: 12rpx;
-  background: #edf7f0;
-  color: #166534;
+  border-radius: 18rpx;
+  background: var(--cp-tint);
+  color: var(--cp-accent);
   font-size: 21rpx;
 }
 
@@ -134,7 +134,7 @@
 .field-help {
   display: block;
   margin-top: 12rpx;
-  color: #89958e;
+  color: var(--cp-muted);
   font-size: 22rpx;
   line-height: 1.5;
 }
@@ -160,7 +160,7 @@
 .immutable-note {
   margin: 26rpx 0;
   padding: 22rpx;
-  border-radius: 18rpx;
+  border-radius: 22rpx;
   background: #fff7e6;
   color: #765000;
   font-size: 22rpx;

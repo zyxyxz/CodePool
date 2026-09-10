@@ -1,4 +1,4 @@
-<view class="page settings-page">
+<view class="page settings-page" style="{{themeStyle}}">
   <view class="about-header">
     <view class="brand-mark">CP</view>
     <text class="app-name">CodePool</text>

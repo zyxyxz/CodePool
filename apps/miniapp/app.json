@@ -14,16 +14,16 @@
   ],
   "window": {
     "navigationStyle": "default",
-    "navigationBarBackgroundColor": "#101820",
-    "navigationBarTextStyle": "white",
+    "navigationBarBackgroundColor": "#F5F7F2",
+    "navigationBarTextStyle": "black",
     "navigationBarTitleText": "CodePool",
-    "backgroundColor": "#F4F7F5",
+    "backgroundColor": "#F5F7F2",
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "color": "#66736B",
-    "selectedColor": "#15803D",
-    "backgroundColor": "#FFFFFF",
+    "color": "#62655F",
+    "selectedColor": "#426B5A",
+    "backgroundColor": "#FFFDFA",
     "borderStyle": "white",
     "list": [
       {

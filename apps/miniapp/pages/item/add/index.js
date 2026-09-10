@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../../utils/theme');
 const { readClipboard } = require('../../../utils/clipboard');
 const { friendlyError } = require('../../../utils/format');
 
@@ -29,6 +30,7 @@ const EMPTY_FORM = {
 
 Page({
   data: {
+    ...getThemeData(),
     itemId: '',
     editing: false,
     loading: true,
@@ -58,6 +60,8 @@ Page({
   },
 
   async onShow() {
+    const selectedTeam = this.data.teams[this.data.teamIndex];
+    applyPageTheme(this, selectedTeam ? selectedTeam.themeColor : getActiveThemeColor(app));
     if (this._ready) return;
     const hasSession = await app.awaitReady();
     if (!hasSession) {
@@ -83,6 +87,7 @@ Page({
       let teamIndex = teams.findIndex((team) => team.teamId === app.globalData.activeTeamId);
       if (teamIndex < 0) teamIndex = 0;
       this.setData({ teams, teamIndex });
+      applyPageTheme(this, teams[teamIndex] ? teams[teamIndex].themeColor : null);
       if (this.data.editing) {
         await this.loadItem();
       } else {
@@ -99,6 +104,7 @@ Page({
     const item = await api.fetchItem(this.data.itemId);
     const kindIndex = Math.max(0, KINDS.findIndex((kind) => kind.value === item.kind));
     const teamIndex = Math.max(0, this.data.teams.findIndex((team) => team.teamId === item.teamId));
+    applyPageTheme(this, this.data.teams[teamIndex] ? this.data.teams[teamIndex].themeColor : null);
     const form = {
       title: item.title || '',
       identifier: item.identifier || '',
@@ -155,7 +161,10 @@ Page({
 
   handleTeamChange(e) {
     if (this.data.editing) return;
-    this.setData({ teamIndex: Number(e.detail.value) });
+    const teamIndex = Number(e.detail.value);
+    if (!Number.isInteger(teamIndex) || !this.data.teams[teamIndex]) return;
+    this.setData({ teamIndex });
+    applyPageTheme(this, this.data.teams[teamIndex].themeColor);
   },
 
   handleExpirationChange(e) {

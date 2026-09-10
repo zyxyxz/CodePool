@@ -4,6 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 const format = require('../utils/format');
+const theme = require('../utils/theme');
 
 function setup(api = {}, wxOverrides = {}) {
   let definition;
@@ -16,7 +17,7 @@ function setup(api = {}, wxOverrides = {}) {
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../pages/account/detail.js'), 'utf8'), {
     getApp: () => app,
     Page(value) { definition = value; },
-    require(name) { return name.endsWith('/api') ? api : name.endsWith('/clipboard') ? { copyText: async () => {} } : format; },
+    require(name) { return name.endsWith('/api') ? api : name.endsWith('/clipboard') ? { copyText: async () => {} } : name.endsWith('/theme') ? theme : format; },
     wx: { showModal: async () => ({ confirm: true }), showToast: (value) => toasts.push(value), setNavigationBarTitle() {}, ...wxOverrides },
     setTimeout, clearTimeout, setInterval, clearInterval,
   });

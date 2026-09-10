@@ -11,21 +11,21 @@
 }
 
 .eyebrow {
-  color: #15803d;
+  color: var(--cp-accent);
   font-size: 20rpx;
-  font-weight: 750;
+  font-weight: 650;
   letter-spacing: 0;
 }
 
 .title {
   margin-top: 12rpx;
   font-size: 44rpx;
-  font-weight: 750;
+  font-weight: 650;
 }
 
 .desc {
   margin-top: 14rpx;
-  color: #718078;
+  color: var(--cp-muted);
   font-size: 24rpx;
   line-height: 1.6;
 }
@@ -35,12 +35,12 @@
 }
 
 .intro {
-  border-bottom: 1rpx solid #e1eae4;
+  border-bottom: 1rpx solid var(--cp-border);
 }
 
 .field {
   padding-bottom: 26rpx;
-  border-bottom: 1rpx solid #edf1ee;
+  border-bottom: 1rpx solid var(--cp-border);
 }
 
 .field + .field {
@@ -58,19 +58,19 @@
 }
 
 .picker-value text:last-child {
-  color: #718078;
+  color: var(--cp-muted);
   font-size: 23rpx;
 }
 
 .picker-value.disabled {
-  background: #eff3f0;
-  color: #718078;
+  background: var(--cp-tint);
+  color: var(--cp-muted);
 }
 
 .field-help {
   display: block;
   margin-top: 12rpx;
-  color: #89958e;
+  color: var(--cp-muted);
   font-size: 22rpx;
   line-height: 1.5;
 }
@@ -89,9 +89,9 @@
 .paste-button {
   min-height: 60rpx;
   padding: 10rpx 18rpx;
-  border-radius: 14rpx;
-  background: #edf7f0;
-  color: #166534;
+  border-radius: 20rpx;
+  background: var(--cp-tint);
+  color: var(--cp-accent);
   font-size: 22rpx;
 }
 
@@ -108,7 +108,7 @@
   min-height: 60rpx;
   margin-top: 12rpx;
   justify-content: space-between;
-  color: #89958e;
+  color: var(--cp-muted);
   font-size: 21rpx;
 }
 

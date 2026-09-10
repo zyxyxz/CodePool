@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../../utils/theme');
 const { copyText } = require('../../../utils/clipboard');
 const {
   KIND_LABELS,
@@ -13,6 +14,7 @@ const MASK_TEXT = '敏感内容已遮挡\n点击“显示内容”后查看';
 
 Page({
   data: {
+    ...getThemeData(),
     itemId: '',
     item: null,
     loading: true,
@@ -32,6 +34,8 @@ Page({
   },
 
   async onShow() {
+    const team = this.data.item && app.globalData.teams.find((entry) => entry.teamId === this.data.item.teamId);
+    applyPageTheme(this, team ? team.themeColor : getActiveThemeColor(app));
     const hasSession = await app.awaitReady();
     if (!hasSession) {
       wx.showToast({ title: '请先登录', icon: 'none' });
@@ -78,6 +82,7 @@ Page({
         expired: isExpired(result.expiresAt),
       };
       const team = app.globalData.teams.find((entry) => entry.teamId === item.teamId);
+      applyPageTheme(this, team ? team.themeColor : getActiveThemeColor(app));
       const role = team ? team.role : 'guest';
       item.canEdit = role === 'owner' || role === 'admin' || role === 'member';
       item.canShare = item.canEdit;
@@ -163,7 +168,7 @@ Page({
       title: '复制敏感内容？',
       content: '复制后内容会进入系统剪贴板，可能被其他应用读取。请在使用后及时覆盖剪贴板。',
       confirmText: '继续复制',
-      confirmColor: '#15803D',
+      confirmColor: this.data.theme.accent,
     });
     if (confirm.confirm) {
       try { await copyText(this._plainContent); }

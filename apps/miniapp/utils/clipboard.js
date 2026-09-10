@@ -19,11 +19,16 @@ async function authorizeClipboard() {
 async function copyText(value, options = {}) {
   const data = typeof value === 'string' ? value : '';
   if (!data) throw new Error('暂无可复制的内容');
+  const isCurrent = () => typeof options.isCurrent !== 'function' || options.isCurrent();
+  if (!isCurrent()) return false;
   await authorizeClipboard();
+  // Privacy approval can outlive a workspace switch or the page itself.
+  if (!isCurrent()) return false;
   await new Promise((resolve, reject) => {
     wx.setClipboardData({ data, success: resolve, fail: (error) => reject(clipboardError(error)) });
   });
-  wx.showToast({ title: options.successMessage || '已复制', icon: 'success' });
+  if (isCurrent()) wx.showToast({ title: options.successMessage || '已复制', icon: 'success' });
+  return true;
 }
 
 async function readClipboard() {

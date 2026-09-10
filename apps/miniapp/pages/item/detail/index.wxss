@@ -1,5 +1,5 @@
 .offline-bar {
-  margin: -28rpx -28rpx 20rpx;
+  margin: -32rpx -32rpx 24rpx;
   padding: 16rpx;
   background: #fff4dc;
   color: #7a4d00;
@@ -9,13 +9,13 @@
 
 .meta-card,
 .content-card {
-  border-radius: 16rpx;
+  border-radius: 28rpx;
   padding: 32rpx;
 }
 
 .meta-card {
-  background: #ffffff;
-  border: 1rpx solid #e2eae5;
+  background: var(--cp-surface);
+  border: 1rpx solid var(--cp-border);
 }
 
 .meta-top,
@@ -35,10 +35,10 @@
 .kind {
   padding: 8rpx 14rpx;
   border-radius: 10rpx;
-  background: #edf7f0;
-  color: #166534;
+  background: var(--cp-tint);
+  color: var(--cp-accent);
   font-size: 20rpx;
-  font-weight: 750;
+  font-weight: 650;
 }
 
 .kind.secret {
@@ -57,7 +57,7 @@
 }
 
 .expiry {
-  color: #718078;
+  color: var(--cp-muted);
   font-size: 22rpx;
 }
 
@@ -73,13 +73,13 @@
 .title {
   margin-top: 24rpx;
   font-size: 42rpx;
-  font-weight: 750;
+  font-weight: 650;
   line-height: 1.35;
 }
 
 .identifier {
   margin-top: 10rpx;
-  color: #536058;
+  color: var(--cp-muted);
   font-size: 25rpx;
 }
 
@@ -87,7 +87,7 @@
   margin-top: 24rpx;
   flex-wrap: wrap;
   gap: 18rpx;
-  color: #89958e;
+  color: var(--cp-muted);
   font-size: 22rpx;
 }
 
@@ -96,16 +96,17 @@
   margin-top: 22rpx;
   display: flex;
   flex-direction: column;
-  background: #101820;
-  color: #e9f2ec;
+  background: linear-gradient(135deg, var(--cp-hero-start), var(--cp-hero-end));
+  border: 1rpx solid var(--cp-border);
+  color: var(--cp-ink);
 }
 
 .content-card.masked {
-  background: #17231d;
+  background: var(--cp-tint);
 }
 
 .content-head {
-  color: #98a79e;
+  color: var(--cp-muted);
   font-size: 21rpx;
 }
 
@@ -113,7 +114,7 @@
   min-height: 190rpx;
   margin: 30rpx 0;
   flex: 1;
-  color: #edf6f0;
+  color: var(--cp-ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 27rpx;
   line-height: 1.7;
@@ -125,15 +126,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #92a299;
+  color: var(--cp-muted);
   text-align: center;
 }
 
 .reveal-button {
   width: 100%;
-  background: #2b3b32;
-  color: #8ff0ab;
-  border-radius: 18rpx;
+  border: 1rpx solid var(--cp-border);
+  background: rgba(255, 253, 250, .72);
+  color: var(--cp-accent);
+  border-radius: 22rpx;
 }
 
 .action-grid {
@@ -149,8 +151,8 @@
 
 .share-ready {
   margin-top: 22rpx;
-  border-color: #b7ddc1;
-  background: #f0f9f2;
+  border-color: var(--cp-border);
+  background: var(--cp-tint);
 }
 
 .share-title,
@@ -167,7 +169,7 @@
 
 .share-desc {
   margin-top: 8rpx;
-  color: #5f6f65;
+  color: var(--cp-muted);
   font-size: 22rpx;
   line-height: 1.55;
 }
@@ -191,7 +193,7 @@
 
 .empty-shares {
   padding: 22rpx 0 8rpx;
-  color: #89958e;
+  color: var(--cp-muted);
   font-size: 24rpx;
   text-align: center;
 }
@@ -202,28 +204,28 @@
   align-items: center;
   justify-content: space-between;
   gap: 16rpx;
-  border-top: 1rpx solid #edf1ee;
+  border-top: 1rpx solid var(--cp-border);
 }
 
 .share-status {
-  color: #718078;
+  color: var(--cp-muted);
   font-size: 24rpx;
   font-weight: 650;
 }
 
 .share-status.active {
-  color: #15803d;
+  color: var(--cp-accent);
 }
 
 .share-time,
 .share-views {
   margin-top: 5rpx;
-  color: #89958e;
+  color: var(--cp-muted);
   font-size: 21rpx;
 }
 
 .share-side { display: flex; align-items: center; gap: 12rpx; }
-.revoke-share { min-height: 60rpx; padding: 10rpx 16rpx; border-radius: 14rpx; background: #fff1f0; color: #b42318; font-size: 21rpx; }
+.revoke-share { min-height: 60rpx; padding: 10rpx 16rpx; border-radius: 20rpx; background: #fff1f0; color: #b42318; font-size: 21rpx; }
 
 .delete-button {
   width: 100%;

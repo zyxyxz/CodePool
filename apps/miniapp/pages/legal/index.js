@@ -1,3 +1,5 @@
+const { getThemeData, applyPageTheme } = require('../../utils/theme');
+
 function buildPolicies(config = {}) {
   const operator = config.operatorName || 'CodePool 运营团队';
   const support = config.supportEmail || '请通过小程序“我的”页面联系运营人员';
@@ -36,8 +38,13 @@ function buildPolicies(config = {}) {
 
 Page({
   data: {
+    ...getThemeData(),
     policy: buildPolicies().privacy,
     needsLegalConfig: true,
+  },
+
+  onShow() {
+    applyPageTheme(this);
   },
 
   onLoad(options) {

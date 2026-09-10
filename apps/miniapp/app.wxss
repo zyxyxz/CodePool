@@ -1,7 +1,16 @@
 page {
   min-height: 100%;
-  background: #f3f6f4;
-  color: #17231d;
+  --cp-bg: #F5F7F2;
+  --cp-surface: #FFFDFA;
+  --cp-ink: #273B32;
+  --cp-muted: #62655F;
+  --cp-accent: #426B5A;
+  --cp-tint: #E7EFE5;
+  --cp-border: #D9E4D7;
+  --cp-hero-start: #E3EDDF;
+  --cp-hero-end: #F4EADF;
+  background: var(--cp-bg);
+  color: var(--cp-ink);
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   font-size: 28rpx;
 }
@@ -41,17 +50,19 @@ button[disabled] {
 
 .page {
   min-height: 100vh;
-  padding: 32rpx 28rpx;
+  background: var(--cp-bg);
+  color: var(--cp-ink);
+  padding: 32rpx;
   padding-bottom: calc(56rpx + env(safe-area-inset-bottom));
 }
 
 .card {
-  background: #ffffff;
-  border: 1rpx solid #e3ebe6;
-  border-radius: 16rpx;
+  background: var(--cp-surface);
+  border: 1rpx solid var(--cp-border);
+  border-radius: 28rpx;
   padding: 28rpx;
-  box-shadow: 0 8rpx 24rpx rgba(18, 54, 34, 0.045);
-  margin-bottom: 20rpx;
+  box-shadow: 0 8rpx 28rpx rgba(55, 46, 37, 0.035);
+  margin-bottom: 24rpx;
 }
 
 .flex {
@@ -67,7 +78,7 @@ button[disabled] {
 
 .section-title {
   display: block;
-  color: #17231d;
+  color: var(--cp-ink);
   font-size: 30rpx;
   font-weight: 650;
   margin-bottom: 20rpx;
@@ -79,7 +90,7 @@ button[disabled] {
 
 .eyebrow {
   display: block;
-  color: #16724a;
+  color: var(--cp-accent);
   font-size: 20rpx;
   font-weight: 700;
   letter-spacing: 0;
@@ -88,22 +99,22 @@ button[disabled] {
 .page-title {
   display: block;
   margin-top: 10rpx;
-  color: #17231d;
+  color: var(--cp-ink);
   font-size: 42rpx;
-  font-weight: 750;
+  font-weight: 650;
   line-height: 1.25;
 }
 
 .page-desc {
   display: block;
   margin-top: 10rpx;
-  color: #66736b;
+  color: var(--cp-muted);
   font-size: 24rpx;
   line-height: 1.6;
 }
 
 .muted {
-  color: #718078;
+  color: var(--cp-muted);
 }
 
 .tag {
@@ -112,8 +123,8 @@ button[disabled] {
   min-height: 44rpx;
   padding: 4rpx 16rpx;
   border-radius: 999rpx;
-  background: #edf7f0;
-  color: #166534;
+  background: var(--cp-tint);
+  color: var(--cp-accent);
   font-size: 22rpx;
 }
 
@@ -122,29 +133,29 @@ button[disabled] {
 .button-danger,
 .button-ghost {
   min-height: 88rpx;
-  border-radius: 14rpx;
+  border-radius: 22rpx;
   padding: 20rpx 28rpx;
   font-weight: 650;
 }
 
 .button-primary {
   color: #ffffff;
-  background: #15803d;
+  background: var(--cp-accent);
 }
 
 .button-primary[disabled] {
   color: rgba(255, 255, 255, 0.75);
-  background: #78a887;
+  background: var(--cp-accent);
 }
 
 .button-secondary {
-  color: #166534;
-  background: #edf7f0;
+  color: var(--cp-accent);
+  background: var(--cp-tint);
 }
 
 .button-ghost {
-  color: #405047;
-  background: #f3f6f4;
+  color: var(--cp-muted);
+  background: var(--cp-bg);
 }
 
 .button-danger {
@@ -155,7 +166,7 @@ button[disabled] {
 .button-small {
   min-height: 72rpx;
   padding: 14rpx 22rpx;
-  border-radius: 12rpx;
+  border-radius: 18rpx;
   font-size: 24rpx;
 }
 
@@ -166,7 +177,7 @@ button[disabled] {
 .field-label {
   display: block;
   margin-bottom: 12rpx;
-  color: #405047;
+  color: var(--cp-ink);
   font-size: 25rpx;
   font-weight: 600;
 }
@@ -177,10 +188,10 @@ button[disabled] {
   width: 100%;
   min-height: 88rpx;
   padding: 22rpx 24rpx;
-  border: 1rpx solid #dbe5df;
-  border-radius: 14rpx;
-  background: #f8faf9;
-  color: #17231d;
+  border: 1rpx solid var(--cp-border);
+  border-radius: 20rpx;
+  background: var(--cp-bg);
+  color: var(--cp-ink);
 }
 
 .textarea {
@@ -190,8 +201,8 @@ button[disabled] {
 
 .input:focus,
 .textarea:focus {
-  border-color: #23855a;
-  background: #ffffff;
+  border-color: var(--cp-accent);
+  background: var(--cp-surface);
 }
 
 .state-card {
@@ -202,14 +213,14 @@ button[disabled] {
 .state-symbol {
   display: block;
   margin-bottom: 20rpx;
-  color: #15803d;
+  color: var(--cp-accent);
   font-size: 56rpx;
   font-weight: 700;
 }
 
 .state-title {
   display: block;
-  color: #17231d;
+  color: var(--cp-ink);
   font-size: 32rpx;
   font-weight: 650;
 }
@@ -218,17 +229,17 @@ button[disabled] {
   display: block;
   margin: 14rpx auto 28rpx;
   max-width: 520rpx;
-  color: #718078;
+  color: var(--cp-muted);
   font-size: 25rpx;
   line-height: 1.6;
 }
 
 .safe-note {
   padding: 20rpx 24rpx;
-  border-left: 6rpx solid #87b99a;
-  border-radius: 10rpx;
-  background: #edf5ef;
-  color: #526158;
+  border-left: 3rpx solid var(--cp-border);
+  border-radius: 18rpx;
+  background: var(--cp-tint);
+  color: var(--cp-muted);
   font-size: 23rpx;
   line-height: 1.6;
 }

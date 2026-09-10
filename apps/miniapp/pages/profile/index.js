@@ -1,11 +1,13 @@
 const { maskText, formatDate, friendlyError } = require('../../utils/format');
 const { submittedNickname, notifyNicknameReview } = require('../../utils/nickname');
 const { copyText } = require('../../utils/clipboard');
+const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../utils/theme');
 
 const app = getApp();
 
 Page({
   data: {
+    ...getThemeData(),
     loading: true,
     needsLogin: false,
     loginLoading: false,
@@ -20,6 +22,7 @@ Page({
   },
 
   async onShow() {
+    applyPageTheme(this, getActiveThemeColor(app));
     const hasSession = await app.awaitReady();
     const profile = app.getStoredProfile();
     if (!hasSession) {
@@ -39,6 +42,7 @@ Page({
   },
 
   applySession() {
+    applyPageTheme(this, getActiveThemeColor(app));
     const user = app.globalData.user;
     const profile = app.getStoredProfile();
     this.setData({

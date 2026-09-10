@@ -1,6 +1,7 @@
 const api = require('../../utils/api');
 const { copyText } = require('../../utils/clipboard');
 const { submittedNickname, notifyNicknameReview } = require('../../utils/nickname');
+const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../utils/theme');
 const {
   KIND_LABELS,
   ROLE_LABELS,
@@ -28,6 +29,7 @@ function defaultProfile() {
 
 Page({
   data: {
+    ...getThemeData(),
     loading: true,
     refreshing: false,
     error: '',
@@ -65,6 +67,8 @@ Page({
   },
 
   async onShow() {
+    this._unloaded = false;
+    this.syncActiveWorkspace();
     await this.initialize();
   },
 
@@ -74,6 +78,11 @@ Page({
   },
 
   onUnload() {
+    this._unloaded = true;
+    this._loadSequence = (this._loadSequence || 0) + 1;
+    this._bootstrapSequence = (this._bootstrapSequence || 0) + 1;
+    this._initializeSequence = (this._initializeSequence || 0) + 1;
+    this._revealSequence = (this._revealSequence || 0) + 1;
     this.clearTicker();
     this.clearSearchTimer();
     this.clearHideTimers();
@@ -93,10 +102,15 @@ Page({
   },
 
   async initialize(options = {}) {
+    const sequence = this._initializeSequence = (this._initializeSequence || 0) + 1;
     const publicConfig = await app.refreshPublicConfig(Boolean(options.forceConfig));
+    if (this._unloaded || sequence !== this._initializeSequence) return;
     this.applyPublicConfig(publicConfig);
     const hasSession = await app.awaitReady();
+    if (this._unloaded || sequence !== this._initializeSequence) return;
     if (!hasSession) {
+      this.clearWorkspaceContent();
+      applyPageTheme(this, getActiveThemeColor(app));
       this.clearTicker();
       const loginProfile = defaultProfile();
       this.setData({
@@ -104,6 +118,8 @@ Page({
         needsLogin: true,
         error: '',
         accounts: [],
+        teams: [],
+        currentTeam: null,
         vaultItems: [],
         visibleAccounts: [],
         visibleVaultItems: [],
@@ -112,6 +128,7 @@ Page({
       });
       return;
     }
+    this.syncActiveWorkspace();
     this.setData({ needsLogin: false, offline: !app.globalData.networkConnected });
     await this.bootstrap(options);
   },
@@ -127,23 +144,25 @@ Page({
   },
 
   async bootstrap(options = {}) {
+    const sequence = this._bootstrapSequence = (this._bootstrapSequence || 0) + 1;
+    const session = app.globalData.token;
     if (!options.silent) this.setData({ loading: true, error: '' });
     try {
       const teams = await api.fetchTeams();
+      if (this._unloaded || sequence !== this._bootstrapSequence || session !== app.globalData.token) return;
       app.globalData.teams = teams;
       const activeId = app.globalData.activeTeamId;
       let teamIndex = teams.findIndex((team) => team.teamId === activeId);
       if (teamIndex < 0) teamIndex = 0;
       const currentTeam = teams[teamIndex] || null;
-      if (currentTeam) app.setActiveTeam(currentTeam.teamId);
+      if ((this.data.currentTeam && this.data.currentTeam.teamId) !== (currentTeam && currentTeam.teamId)) this.clearWorkspaceContent();
+      app.setActiveTeam(currentTeam ? currentTeam.teamId : null);
       this.setData({ teams, teamIndex, currentTeam, error: '' });
+      applyPageTheme(this, currentTeam ? currentTeam.themeColor : null);
       await this.loadData({ silent: options.silent });
     } catch (error) {
-      if (error.code === 'UNAUTHORIZED') {
-        app.logout();
-        this.setData({ needsLogin: true, loading: false, error: '' });
-        return;
-      }
+      if (this._unloaded || sequence !== this._bootstrapSequence) return;
+      if (this.handleSessionError(error, session) || session !== app.globalData.token) return;
       this.setData({
         loading: false,
         error: friendlyError(error, '代码池加载失败'),
@@ -154,6 +173,8 @@ Page({
 
   async loadData(options = {}) {
     const team = this.data.teams[this.data.teamIndex];
+    const sequence = this._loadSequence = (this._loadSequence || 0) + 1;
+    const session = app.globalData.token;
     this.clearTicker();
     this.clearHideTimers();
     if (!team) {
@@ -173,6 +194,7 @@ Page({
         api.fetchAccounts(team.teamId, this.data.query.trim()),
         api.fetchItems(team.teamId, this.data.query.trim()),
       ]);
+      if (!this.isCurrentRequest(sequence, team.teamId, session)) return;
       const accounts = accountRows.map((item) => ({
         ...item,
         kindLabel: KIND_LABELS.totp,
@@ -192,12 +214,51 @@ Page({
       this.setData({ accounts, vaultItems, loading: false, error: '', offline: false });
       this.applyFilter();
     } catch (error) {
+      if (sequence === this._loadSequence && this.handleSessionError(error, session)) return;
+      if (!this.isCurrentRequest(sequence, team.teamId, session)) return;
       this.setData({
         loading: false,
         error: friendlyError(error, '内容加载失败'),
         offline: Boolean(error.offline),
       });
     }
+  },
+
+  handleSessionError(error, session) {
+    if (error.code !== 'UNAUTHORIZED' || (app.globalData.token && session !== app.globalData.token)) return false;
+    app.logout();
+    this.clearWorkspaceContent();
+    this.setData({ needsLogin: true, loading: false, teams: [], currentTeam: null });
+    applyPageTheme(this, null);
+    return true;
+  },
+
+  isCurrentRequest(sequence, teamId, session) {
+    return !this._unloaded && sequence === this._loadSequence && session === app.globalData.token
+      && this.data.currentTeam && this.data.currentTeam.teamId === teamId
+      && app.globalData.activeTeamId === teamId;
+  },
+
+  clearWorkspaceContent() {
+    this._loadSequence = (this._loadSequence || 0) + 1;
+    this._revealSequence = (this._revealSequence || 0) + 1;
+    this.clearTicker();
+    this.clearHideTimers();
+    this.clearSearchTimer();
+    this._codeRefreshing = {};
+    this.setData({ accounts: [], vaultItems: [], visibleAccounts: [], visibleVaultItems: [], resultCount: 0, error: '' });
+  },
+
+  syncActiveWorkspace() {
+    const activeId = app.globalData.activeTeamId;
+    const teams = app.globalData.teams || [];
+    const currentTeam = teams.find((team) => team.teamId === activeId) || null;
+    if ((this.data.currentTeam && this.data.currentTeam.teamId) !== activeId) {
+      this.clearWorkspaceContent();
+      this.setData({ query: '', activeFilter: 'all', loading: true });
+    }
+    if (currentTeam) this.setData({ teams, currentTeam, teamIndex: teams.indexOf(currentTeam) });
+    applyPageTheme(this, getActiveThemeColor(app));
   },
 
   applyFilter() {
@@ -222,10 +283,12 @@ Page({
   handleTeamChange(e) {
     const teamIndex = Number(e.detail.value);
     const currentTeam = this.data.teams[teamIndex] || null;
-    this.setData({ teamIndex, currentTeam, query: '' }, () => {
-      if (currentTeam) app.setActiveTeam(currentTeam.teamId);
-      this.loadData();
-    });
+    if (!currentTeam || !Number.isInteger(teamIndex)) return;
+    this.clearWorkspaceContent();
+    app.setActiveTeam(currentTeam.teamId);
+    this.setData({ teamIndex, currentTeam, query: '', loading: true });
+    applyPageTheme(this, currentTeam.themeColor);
+    return this.loadData();
   },
 
   handleSearchInput(e) {
@@ -335,10 +398,19 @@ Page({
   },
 
   async fetchCode(accountId, userInitiated = false) {
+    this._codeRefreshing = this._codeRefreshing || {};
     if (this._codeRefreshing[accountId]) return this._codeRefreshing[accountId];
+    const sequence = this._revealSequence || 0;
+    const teamId = this.data.currentTeam && this.data.currentTeam.teamId;
+    const session = app.globalData.token;
+    const isCurrent = () => !this._unloaded && sequence === (this._revealSequence || 0)
+      && session === app.globalData.token && app.globalData.activeTeamId === teamId
+      && this.data.currentTeam && this.data.currentTeam.teamId === teamId
+      && this.data.accounts.some((account) => account.id === accountId);
     this.updateAccount(accountId, { codeLoading: true });
-    this._codeRefreshing[accountId] = api.fetchAccountCode(accountId)
+    const pending = api.fetchAccountCode(accountId)
       .then((result) => {
+        if (!isCurrent()) return '';
         const total = Number(result.period) || 30;
         const expiresIn = Number(result.expiresIn);
         const safeExpires = Number.isFinite(expiresIn) ? Math.max(0, expiresIn) : total;
@@ -356,14 +428,16 @@ Page({
         return result.code;
       })
       .catch((error) => {
+        if (!isCurrent()) return '';
         this.updateAccount(accountId, { codeLoading: false });
         if (userInitiated) wx.showToast({ title: friendlyError(error, '验证码获取失败'), icon: 'none' });
         return '';
       })
       .finally(() => {
-        delete this._codeRefreshing[accountId];
+        if (this._codeRefreshing[accountId] === pending) delete this._codeRefreshing[accountId];
       });
-    return this._codeRefreshing[accountId];
+    this._codeRefreshing[accountId] = pending;
+    return pending;
   },
 
   updateAccount(accountId, patch) {
@@ -418,6 +492,8 @@ Page({
   },
 
   hideAllCodes() {
+    this._revealSequence = (this._revealSequence || 0) + 1;
+    this._codeRefreshing = {};
     this.clearHideTimers();
     const accounts = this.data.accounts.map((item) => ({
       ...item,
@@ -433,9 +509,15 @@ Page({
     const { id } = e.currentTarget.dataset;
     const account = this.data.accounts.find((item) => item.id === id);
     if (!account) return;
+    const teamId = this.data.currentTeam && this.data.currentTeam.teamId;
+    const sequence = this._revealSequence || 0;
+    const session = app.globalData.token;
+    const isCurrent = () => !this._unloaded && sequence === (this._revealSequence || 0)
+      && session === app.globalData.token && app.globalData.activeTeamId === teamId
+      && this.data.currentTeam && this.data.currentTeam.teamId === teamId;
     const code = account.code || await this.fetchCode(id, true);
-    if (code) {
-      try { await copyText(code, { successMessage: '动态码已复制' }); }
+    if (code && isCurrent()) {
+      try { await copyText(code, { successMessage: '动态码已复制', isCurrent }); }
       catch (error) { wx.showToast({ title: friendlyError(error, '复制失败'), icon: 'none' }); }
     }
   },

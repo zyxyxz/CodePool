@@ -1,9 +1,11 @@
 const api = require('./utils/api');
+const { normalizeThemeColor, applyPageTheme } = require('./utils/theme');
 
 const STORAGE = {
   TOKEN: 'CODEPOOL_TOKEN',
   PROFILE: 'CODEPOOL_PROFILE',
   ACTIVE_TEAM: 'CODEPOOL_ACTIVE_TEAM',
+  ACTIVE_THEME: 'CODEPOOL_ACTIVE_THEME',
   PRIVACY_MASK: 'CODEPOOL_PRIVACY_MASK',
   LEGAL_CONSENT: 'CODEPOOL_LEGAL_CONSENT',
   PUBLIC_CONFIG: 'CODEPOOL_PUBLIC_CONFIG',
@@ -141,6 +143,7 @@ App({
     token: '',
     teams: [],
     activeTeamId: null,
+    activeThemeColor: '#15803D',
     pendingInviteToken: '',
     profile: { ...DEFAULT_PROFILE },
     sessionReady: false,
@@ -156,6 +159,8 @@ App({
     this.captureInvite(options);
     this.globalData.profile = this.getStoredProfile();
     this.globalData.activeTeamId = wx.getStorageSync(STORAGE.ACTIVE_TEAM) || null;
+    const storedTheme = wx.getStorageSync(STORAGE.ACTIVE_THEME);
+    this.globalData.activeThemeColor = normalizeThemeColor(storedTheme && storedTheme.teamId === this.globalData.activeTeamId ? storedTheme.color : null);
     const storedMask = wx.getStorageSync(STORAGE.PRIVACY_MASK);
     this.globalData.privacyMask = storedMask === '' ? true : Boolean(storedMask);
     this.globalData.legalConsent = this.hasLegalConsent();
@@ -327,9 +332,17 @@ App({
   },
 
   setActiveTeam(teamId) {
+    const previousId = this.globalData.activeTeamId;
     this.globalData.activeTeamId = teamId || null;
-    if (teamId) wx.setStorageSync(STORAGE.ACTIVE_TEAM, teamId);
-    else wx.removeStorageSync(STORAGE.ACTIVE_TEAM);
+    const team = this.globalData.teams.find((entry) => entry.teamId === teamId);
+    this.globalData.activeThemeColor = normalizeThemeColor(team ? team.themeColor : previousId === teamId ? this.globalData.activeThemeColor : null);
+    if (teamId) {
+      wx.setStorageSync(STORAGE.ACTIVE_TEAM, teamId);
+      wx.setStorageSync(STORAGE.ACTIVE_THEME, { teamId, color: this.globalData.activeThemeColor });
+    } else {
+      wx.removeStorageSync(STORAGE.ACTIVE_TEAM);
+      wx.removeStorageSync(STORAGE.ACTIVE_THEME);
+    }
   },
 
   setPrivacyMask(enabled) {
@@ -571,11 +584,16 @@ App({
     this.globalData.token = '';
     this.globalData.teams = [];
     this.globalData.activeTeamId = null;
+    this.globalData.activeThemeColor = '#15803D';
     api.setToken('');
     if (clearStorage) {
       wx.removeStorageSync(STORAGE.TOKEN);
       wx.removeStorageSync(STORAGE.ACTIVE_TEAM);
+      wx.removeStorageSync(STORAGE.ACTIVE_THEME);
     }
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    const currentPage = pages[pages.length - 1];
+    if (currentPage && typeof currentPage.setData === 'function') applyPageTheme(currentPage, null);
   },
 
   logout(clearStorage = true) {

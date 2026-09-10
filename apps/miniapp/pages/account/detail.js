@@ -1,4 +1,5 @@
 const api = require('../../utils/api');
+const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../utils/theme');
 const { copyText } = require('../../utils/clipboard');
 const {
   formatDate,
@@ -10,6 +11,7 @@ const app = getApp();
 
 Page({
   data: {
+    ...getThemeData(),
     accountId: '',
     account: null,
     loading: true,
@@ -43,6 +45,8 @@ Page({
   },
 
   async onShow() {
+    const team = this.data.account && app.globalData.teams.find((entry) => entry.teamId === this.data.account.teamId);
+    applyPageTheme(this, team ? team.themeColor : getActiveThemeColor(app));
     const hasSession = await app.awaitReady();
     if (!hasSession) {
       wx.showToast({ title: '请先登录', icon: 'none' });
@@ -88,6 +92,7 @@ Page({
         updatedText: formatDate(result.updatedAt, true),
       };
       const team = app.globalData.teams.find((entry) => entry.teamId === account.teamId);
+      applyPageTheme(this, team ? team.themeColor : getActiveThemeColor(app));
       const role = team ? team.role : 'guest';
       account.teamName = team ? team.name : '所属团队';
       account.canManage = role === 'owner' || role === 'admin';
@@ -244,7 +249,7 @@ Page({
       title: '复制动态验证码？',
       content: `验证码将在约 ${this.data.expiresIn} 秒后失效。复制后请仅粘贴到可信页面。`,
       confirmText: '复制',
-      confirmColor: '#15803D',
+      confirmColor: this.data.theme.accent,
     });
     if (confirm.confirm) {
       try { await copyText(code, { successMessage: '动态码已复制' }); }
@@ -335,13 +340,14 @@ Page({
         title: '确认转移动态验证码？',
         content: `将转移到「${target.name}」。原团队成员将无法访问，目标团队成员可按权限使用。已有分享会同时撤销，验证码生成规则保持不变。`,
         confirmText: '确认转移',
-        confirmColor: '#15803D',
+        confirmColor: this.data.theme.accent,
       });
       if (!confirm.confirm || this._unloaded) return;
       this.hideCode();
       const result = await api.transferAccount(accountId, sourceTeamId, target.teamId);
       app.setActiveTeam(result.account.teamId);
       if (this._unloaded) return;
+      applyPageTheme(this, target.themeColor);
       this._sharesRequestVersion = (this._sharesRequestVersion || 0) + 1;
       this.setData({
         account: { ...result.account, teamName: target.name, canManage: true, canShare: true, updatedText: formatDate(result.account.updatedAt, true) },

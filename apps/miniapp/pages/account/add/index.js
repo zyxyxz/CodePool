@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../../utils/theme');
 const { readClipboard } = require('../../../utils/clipboard');
 const { friendlyError } = require('../../../utils/format');
 
@@ -48,6 +49,7 @@ function parseOtpAuth(value) {
 
 Page({
   data: {
+    ...getThemeData(),
     accountId: '',
     editing: false,
     loading: true,
@@ -77,6 +79,8 @@ Page({
   },
 
   async onShow() {
+    const selectedTeam = this.data.teams[this.data.teamIndex];
+    applyPageTheme(this, selectedTeam ? selectedTeam.themeColor : getActiveThemeColor(app));
     if (this._ready) return;
     const hasSession = await app.awaitReady();
     if (!hasSession) {
@@ -94,6 +98,7 @@ Page({
       let teamIndex = teams.findIndex((team) => team.teamId === app.globalData.activeTeamId);
       if (teamIndex < 0) teamIndex = 0;
       this.setData({ teams, teamIndex });
+      applyPageTheme(this, teams[teamIndex] ? teams[teamIndex].themeColor : null);
       if (this.data.editing) await this.loadAccount();
       this._ready = true;
       this.setData({ loading: false });
@@ -108,6 +113,7 @@ Page({
     const digitsIndex = Math.max(0, DIGITS.indexOf(Number(account.digits)));
     const periodIndex = Math.max(0, PERIODS.indexOf(Number(account.period)));
     const teamIndex = Math.max(0, this.data.teams.findIndex((team) => team.teamId === account.teamId));
+    applyPageTheme(this, this.data.teams[teamIndex] ? this.data.teams[teamIndex].themeColor : null);
     this.setData({
       teamIndex,
       algorithmIndex,
@@ -130,7 +136,11 @@ Page({
   },
 
   handleTeamChange(e) {
-    if (!this.data.editing) this.setData({ teamIndex: Number(e.detail.value) });
+    if (this.data.editing) return;
+    const teamIndex = Number(e.detail.value);
+    if (!Number.isInteger(teamIndex) || !this.data.teams[teamIndex]) return;
+    this.setData({ teamIndex });
+    applyPageTheme(this, this.data.teams[teamIndex].themeColor);
   },
 
   handleAlgorithmChange(e) {
