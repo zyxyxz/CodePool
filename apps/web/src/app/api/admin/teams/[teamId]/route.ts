@@ -3,6 +3,7 @@ import { z } from "zod";
 import { adminAudit, adminFail, adminOk, parseAuditDetail, requireAdminRequest } from "@/server/admin";
 import { ApiError, jsonBody } from "@/server/api";
 import { db } from "@/server/db";
+import { teamThemeColorSchema } from '@/server/teams';
 
 type Context = { params: Promise<{ teamId: string }> };
 
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest, context: Context) {
     z.uuid().parse(teamId);
     const team = db
       .prepare(
-        `SELECT t.id, t.name, t.slug, t.status,
+        `SELECT t.id, t.name, t.slug, t.status, t.theme_color AS themeColor,
           t.disabled_at AS disabledAt, t.disabled_reason AS disabledReason,
           t.created_at AS createdAt, t.updated_at AS updatedAt,
           u.id AS ownerId, u.nickname AS ownerName, u.avatar_url AS ownerAvatarUrl,
@@ -74,20 +75,21 @@ export async function PATCH(request: NextRequest, context: Context) {
     const input = z
       .object({
         name: z.string().trim().min(2).max(48).optional(),
+        themeColor: teamThemeColorSchema.optional(),
         status: z.enum(["active", "disabled"]).optional(),
         ownerId: z.uuid().optional(),
         reason: z.string().trim().max(300).optional(),
       })
       .strict()
       .refine(
-        (value) => value.name !== undefined || value.status !== undefined || value.ownerId !== undefined,
+        (value) => value.name !== undefined || value.themeColor !== undefined || value.status !== undefined || value.ownerId !== undefined,
         "至少需要修改一个字段",
       )
       .parse(await jsonBody(request));
     const operation = db.transaction(() => {
       const current = db
-      .prepare("SELECT id, name, status, owner_id AS ownerId FROM teams WHERE id = ?")
-      .get(teamId) as { id: string; name: string; status: "active" | "disabled"; ownerId: string } | undefined;
+      .prepare("SELECT id, name, status, theme_color AS themeColor, disabled_reason AS disabledReason, owner_id AS ownerId FROM teams WHERE id = ?")
+      .get(teamId) as { id: string; name: string; themeColor: string; disabledReason: string | null; status: "active" | "disabled"; ownerId: string } | undefined;
       if (!current) throw new ApiError(404, "团队不存在", "TEAM_NOT_FOUND");
 
       const nextOwnerId = input.ownerId ?? current.ownerId;
@@ -120,15 +122,15 @@ export async function PATCH(request: NextRequest, context: Context) {
         }
       }
 
-      const reason = nextStatus === "disabled" ? input.reason || "管理员停用" : null;
-      const revokedShares = nextStatus === "disabled"
+      const reason = nextStatus === "disabled" ? input.reason || current.disabledReason || "管理员停用" : null;
+      const revokedShares = input.status === "disabled"
         ? db.prepare(
             `UPDATE share_links SET revoked_at = CURRENT_TIMESTAMP
              WHERE revoked_at IS NULL AND item_id IN
                (SELECT id FROM vault_items WHERE team_id = ?)`,
           ).run(teamId).changes
         : 0;
-      const revokedInvites = nextStatus === "disabled"
+      const revokedInvites = input.status === "disabled"
         ? db.prepare(
             `UPDATE team_invites SET revoked_at = CURRENT_TIMESTAMP, expires_at = CURRENT_TIMESTAMP
              WHERE team_id = ? AND revoked_at IS NULL AND used_at IS NULL`,
@@ -143,11 +145,11 @@ export async function PATCH(request: NextRequest, context: Context) {
         ).run(teamId, nextOwnerId);
       }
       db.prepare(
-        `UPDATE teams SET name = ?, status = ?, owner_id = ?,
+        `UPDATE teams SET name = ?, status = ?, owner_id = ?, theme_color = ?,
           disabled_at = CASE WHEN ? = 'disabled' THEN COALESCE(disabled_at, CURRENT_TIMESTAMP) ELSE NULL END,
           disabled_reason = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-      ).run(nextName, nextStatus, nextOwnerId, nextStatus, reason, teamId);
+      ).run(nextName, nextStatus, nextOwnerId, input.themeColor ?? current.themeColor, nextStatus, reason, teamId);
       adminAudit(request, session, {
         teamId,
         action: nextOwnerId !== current.ownerId
@@ -161,6 +163,7 @@ export async function PATCH(request: NextRequest, context: Context) {
           previousStatus: current.status,
           status: nextStatus,
           nameChanged: nextName !== current.name,
+          themeColorChanged: input.themeColor !== undefined && input.themeColor !== current.themeColor,
           previousOwnerId: current.ownerId,
           ownerId: nextOwnerId,
           reason,
@@ -173,7 +176,7 @@ export async function PATCH(request: NextRequest, context: Context) {
     const result = operation.immediate();
     const team = db
       .prepare(
-        `SELECT t.id, t.name, t.slug, t.status, t.owner_id AS ownerId,
+        `SELECT t.id, t.name, t.slug, t.status, t.theme_color AS themeColor, t.owner_id AS ownerId,
           u.nickname AS ownerName, t.disabled_at AS disabledAt,
           t.disabled_reason AS disabledReason, t.created_at AS createdAt,
           t.updated_at AS updatedAt

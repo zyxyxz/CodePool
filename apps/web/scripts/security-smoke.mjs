@@ -264,6 +264,50 @@ async function main() {
     expectStatus(adminLogin, 200, "admin login for disable test");
     const adminCookie = (adminLogin.response.headers.get("set-cookie") || "").split(";")[0];
     assert.ok(adminCookie.startsWith("codepool_admin="), "admin login did not set a session cookie");
+    const adminHeaders = { cookie: adminCookie, origin: baseUrl };
+    const editedUser = await call(`/api/admin/users/${owner.userId}`, {
+      method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ nickname: '运营更新昵称', avatar: {
+        mimeType: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      } }),
+    });
+    expectStatus(editedUser, 200, 'admin updates profile');
+    assert.equal(editedUser.body.data.user.nickname, '运营更新昵称');
+    assert.equal(editedUser.body.data.user.status, 'active');
+    assert.equal(editedUser.body.data.sessionsRevoked, false);
+    expectStatus(await call('/api/v1/auth/me', { headers: bearer(owner.token) }), 200, 'profile edit preserves session');
+    const badAvatar = await call(`/api/admin/users/${owner.userId}`, {
+      method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ nickname: '不应保存', avatar: { data: 'not-an-image', mimeType: 'image/png' } }),
+    });
+    assert.ok(badAvatar.response.status >= 400);
+    const unchangedUser = await call(`/api/admin/users/${owner.userId}`, { headers: adminHeaders });
+    assert.equal(unchangedUser.body.data.user.nickname, '运营更新昵称');
+    assert.ok(unchangedUser.body.data.recentAudit.some((row) => row.action === 'ADMIN_USER_PROFILE_UPDATE'));
+    expectStatus(await call(`/api/admin/users/${owner.userId}`, {
+      method: 'PATCH', headers: { ...adminHeaders, origin: 'https://cross-site.invalid' }, body: JSON.stringify({ nickname: '越权' }),
+    }), 403, 'profile editing rejects cross-site requests');
+    expectStatus(await call(`/api/admin/users/${owner.userId}`, {
+      method: 'PATCH', headers: bearer(member.token), body: JSON.stringify({ nickname: '越权' }),
+    }), 401, 'members cannot edit admin profiles');
+    const editedTeam = await call(`/api/admin/teams/${owner.teamId}`, {
+      method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ name: '运营更新团队', themeColor: '#7C3AED' }),
+    });
+    expectStatus(editedTeam, 200, 'admin updates team metadata');
+    assert.equal(editedTeam.body.data.team.themeColor, '#7C3AED');
+    assert.equal(editedTeam.body.data.revokedShares, 0);
+    const fetchedTeam = await call(`/api/admin/teams/${owner.teamId}`, { headers: adminHeaders });
+    assert.equal(fetchedTeam.body.data.team.name, '运营更新团队');
+    assert.equal(fetchedTeam.body.data.team.themeColor, '#7C3AED');
+    expectStatus(await call(`/api/admin/teams/${owner.teamId}`, {
+      method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ themeColor: '#000000' }),
+    }), 422, 'reject invalid team theme');
+    expectStatus(await call(`/api/admin/teams/${owner.teamId}/members/${owner.userId}`, {
+      method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ role: 'guest' }),
+    }), 409, 'admin role editor protects owner');
+    expectStatus(await call(`/api/admin/teams/${owner.teamId}/members/${member.userId}`, {
+      method: 'PATCH', headers: adminHeaders, body: JSON.stringify({ role: 'guest' }),
+    }), 200, 'admin edits member role');
+    const roleTeam = await call(`/api/admin/teams/${owner.teamId}`, { headers: adminHeaders });
+    assert.equal(roleTeam.body.data.members.find((row) => row.userId === member.userId).role, 'guest');
     const maintenanceOn = await call("/api/admin/settings", {
       method: "PATCH",
       headers: { cookie: adminCookie, origin: baseUrl },
