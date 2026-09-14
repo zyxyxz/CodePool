@@ -107,6 +107,11 @@ test("new login teams and explicit team creation include theme defaults", async 
   const loginData = (await loginResponse.json()).data;
   assert.equal(loginData.user.teams[0].themeColor, "#15803D");
   const teams = await import("../src/app/api/v1/teams/route");
+  assert.equal(loginData.user.profileCompleted, false);
+  const blocked = await teams.POST(request(loginData.accessToken, { name: '未完善不能创建' }, 'POST'));
+  assert.equal((await blocked.json()).error, 'PROFILE_INCOMPLETE');
+  // The setup flow itself is covered by profile-avatar tests.
+  (await dbPromise).prepare('UPDATE users SET profile_completed = 1 WHERE id = ?').run(loginData.user.id);
   const response = await teams.POST(request(loginData.accessToken, { name: "新建蓝色团队", themeColor: "#2563EB" }, "POST"));
   assert.equal(response.status, 201);
   assert.equal((await response.json()).data.themeColor, "#2563EB");

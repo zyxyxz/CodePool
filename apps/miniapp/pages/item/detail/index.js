@@ -334,7 +334,7 @@ Page({
       };
     }
     return {
-      title: 'CodePool · 团队安全代码池',
+      title: 'CodePool · 团队密钥钱包',
       path: '/pages/home/index',
     };
   },

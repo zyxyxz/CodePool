@@ -191,6 +191,14 @@ const migrations = [
   ALTER TABLE teams ADD COLUMN theme_color TEXT NOT NULL DEFAULT '#15803D'
     CHECK(theme_color IN ('#15803D', '#2563EB', '#7C3AED', '#DB2777', '#EA580C', '#0891B2'));
   `,
+  `
+  ALTER TABLE users ADD COLUMN profile_completed INTEGER NOT NULL DEFAULT 1
+    CHECK(profile_completed IN (0, 1));
+  UPDATE teams SET name = (
+    SELECT substr(nickname, 1, 42) || '的密钥钱包' FROM users WHERE users.id = teams.owner_id
+  ), updated_at = CURRENT_TIMESTAMP
+  WHERE name = '我的代码池' AND slug = 'pool-' || substr(owner_id, 1, 12);
+  `,
 ];
 
 declare global {

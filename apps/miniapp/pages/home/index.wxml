@@ -11,14 +11,7 @@
     <view class="brand-mark">CP</view>
     <view class="login-title">进入 {{workspaceName}}</view>
     <view class="login-desc">使用微信身份建立成员会话；不会读取通讯录、手机号或聊天记录。</view>
-    <view class="avatar-picker">
-      <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{loginLoading || avatarProcessing}}" aria-label="使用微信头像">
-        <image class="login-avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
-        <text>{{avatarProcessing ? '处理中' : '使用微信头像'}}</text>
-      </button>
-      <button class="avatar-alternate" disabled="{{loginLoading || avatarProcessing}}" bindtap="handleChooseAvatarFallback">相册 / 相机</button>
-    </view>
-    <input class="input nickname-input" type="nickname" name="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || avatarProcessing}}" bindnicknamereview="handleNicknameReview" />
+    <text class="login-desc">新用户登录后需设置昵称和头像，即可开启密钥钱包。</text>
     <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="{{theme.accent}}" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
     <button class="button-primary login-button" form-type="submit" loading="{{loginLoading}}" disabled="{{loginLoading || avatarProcessing || !legalConsent}}">微信快捷登录</button>
     <view class="login-context"><text>仅处理身份识别、团队协作和必要审计信息</text><text>登录后可在“我的”中管理资料和退出本机</text></view>
@@ -34,8 +27,8 @@
       <view class="hero-top">
         <view class="space-caption"><view class="space-dot" /><text>当前空间</text></view>
         <view class="hero-tools">
-          <button class="hero-tool" bindtap="handleRetry" aria-label="刷新代码池">↻</button>
-          <button class="hero-tool hero-tool-primary {{maintenanceMode ? 'maintenance' : ''}}" wx:if="{{teams.length && !loading}}" bindtap="handleAdd" aria-label="{{maintenanceMode ? '系统维护中' : '新增代码池内容'}}">＋</button>
+          <button class="hero-tool" bindtap="handleRetry" aria-label="刷新密钥">↻</button>
+          <button class="hero-tool hero-tool-primary {{maintenanceMode ? 'maintenance' : ''}}" wx:if="{{teams.length && !loading}}" bindtap="handleAdd" aria-label="{{maintenanceMode ? '系统维护中' : '新增密钥内容'}}">＋</button>
         </view>
       </view>
       <picker wx:if="{{teams.length}}" mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
@@ -70,7 +63,7 @@
 
     <view class="card state-card" wx:if="{{loading}}">
       <view class="state-symbol loading-dot">···</view>
-      <text class="state-title">正在同步代码池</text>
+      <text class="state-title">正在同步密钥</text>
       <text class="state-desc">正在校验权限并同步必要元数据；敏感正文不会自动读取。</text>
     </view>
 
@@ -90,7 +83,7 @@
 
     <view class="card state-card" wx:elif="{{resultCount === 0}}">
       <view class="state-symbol">∅</view>
-      <text class="state-title">{{query ? '没有匹配内容' : '代码池还是空的'}}</text>
+      <text class="state-title">{{query ? '没有匹配内容' : '密钥还是空的'}}</text>
       <text class="state-desc">{{query ? '换一个关键词或筛选条件试试。' : '添加第一条代码、密文或动态验证码。'}}</text>
       <button class="button-primary" wx:if="{{!query}}" bindtap="handleAdd">添加第一项内容</button>
       <button class="button-secondary" wx:else bindtap="handleSearchClear">清除搜索</button>

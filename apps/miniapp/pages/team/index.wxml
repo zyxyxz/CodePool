@@ -5,15 +5,8 @@
     <form bindsubmit="handleLogin">
       <text class="login-title">登录后管理团队</text>
       <text class="login-desc">登录只用于验证团队身份和记录必要的安全操作。</text>
-      <view class="avatar-picker">
-        <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{loginLoading || avatarProcessing}}">
-          <image class="login-avatar" src="{{loginProfile.avatarUrl || '/assets/avatar-default.png'}}" mode="aspectFill" />
-          <text>{{avatarProcessing ? '处理中' : '使用微信头像'}}</text>
-        </button>
-        <button class="avatar-alternate" disabled="{{loginLoading || avatarProcessing}}" bindtap="handleChooseAvatarFallback">相册 / 相机</button>
-      </view>
-      <input class="input nickname-input" type="nickname" name="nickname" maxlength="64" value="{{loginProfile.nickname}}" placeholder="你的昵称" disabled="{{loginLoading || avatarProcessing}}" bindnicknamereview="handleNicknameReview" />
-      <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="{{theme.accent}}" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
+      <text class="login-desc">新用户登录后需设置昵称和头像，即可开启密钥钱包。</text>
+    <checkbox-group class="consent-row" bindchange="handleLegalConsent"><label><checkbox value="agree" checked="{{legalConsent}}" color="{{theme.accent}}" /><text>我已阅读并同意</text></label><text class="legal-link" bindtap="goPrivacy">《隐私政策》</text><text>和</text><text class="legal-link" bindtap="goTerms">《用户协议》</text></checkbox-group>
       <button class="button-primary" form-type="submit" loading="{{loginLoading}}" disabled="{{loginLoading || avatarProcessing || !legalConsent}}">微信快捷登录</button>
     </form>
   </view>
@@ -22,10 +15,9 @@
     <view class="team-header">
       <view>
         <text class="eyebrow">TEAM WORKSPACE</text>
-        <text class="page-title">团队与权限</text>
-        <text class="page-desc">成员、邀请和权限变更统一在这里管理。</text>
+        <text class="page-title">{{isDetail ? '团队详情' : '我的团队'}}</text>
+        <text class="page-desc">{{isDetail ? '团队设置、成员与邀请' : '每一处协作，都有自己的空间。'}}</text>
       </view>
-      <button class="create-button" bindtap="handleCreateTeam">新建团队</button>
     </view>
 
     <view class="card state-card" wx:if="{{loading}}">
@@ -39,34 +31,34 @@
       <text class="state-title">团队加载失败</text>
       <text class="state-desc">{{error}}</text>
       <button class="button-secondary" bindtap="handleRetry">重新加载</button>
+      <button class="button-ghost" wx:if="{{isDetail}}" bindtap="handleBackToTeams">返回团队列表</button>
     </view>
 
-    <view class="card state-card" wx:elif="{{!teams.length}}">
-      <text class="state-symbol">+</text>
-      <text class="state-title">还没有可用团队</text>
-      <text class="state-desc">创建团队，或通过邀请码加入已有团队代码池。</text>
-      <button class="button-primary" bindtap="handleCreateTeam">创建第一个团队</button>
-      <button class="button-ghost accept-empty" bindtap="handleAcceptInvite">使用邀请码加入</button>
+    <view class="team-cards" wx:elif="{{!isDetail}}">
+      <view class="list-summary"><text>{{teams.length ? '已加入 ' + teams.length + ' 个团队' : '还没有团队，从这里开始协作'}}</text><text wx:if="{{teams.length}}">点击卡片查看详情</text></view>
+      <button class="team-card" wx:for="{{teams}}" wx:key="teamId" style="{{item.cardStyle}}" data-teamid="{{item.teamId}}" bindtap="handleOpenTeam" aria-label="查看{{item.name}}的团队详情">
+        <view class="team-card-top"><text class="team-role">{{item.roleLabel}}</text><text class="current-badge" wx:if="{{activeTeamId === item.teamId}}">当前空间</text></view>
+        <view class="team-card-main"><text class="team-card-name">{{item.name}}</text><text class="team-card-arrow">›</text></view>
+        <text class="team-card-meta">{{item.memberCount}} 位成员 · {{item.itemCount}} 项内容</text>
+      </button>
+      <button class="add-team-card" bindtap="handleAddTeam" aria-label="添加团队，创建或加入团队"><text class="add-team-plus">＋</text><text class="add-team-title">添加团队</text><text class="add-team-desc">创建新的协作空间，或通过邀请码加入</text></button>
     </view>
 
     <block wx:else>
       <view class="workspace-card">
         <view class="workspace-card-top">
-          <text>当前团队空间</text>
+          <text>{{activeTeamId === currentTeam.teamId ? '当前团队空间' : '团队空间'}}</text>
           <button class="workspace-edit" wx:if="{{canManage}}" bindtap="handleEditTeam" aria-label="编辑团队名称和主题色">编辑</button>
         </view>
-        <picker mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">
           <view class="workspace-picker">
             <view>
               <text class="workspace-name">{{currentTeam.name}}</text>
               <text class="workspace-meta">{{currentRoleLabel}} · {{currentTeam.memberCount}} 位成员 · {{currentTeam.itemCount}} 项内容</text>
             </view>
-            <text>切换 ›</text>
           </view>
-        </picker>
         <view class="workspace-actions">
+          <button class="button-primary" bindtap="handleEnterWorkspace">进入密钥</button>
           <button class="button-secondary" wx:if="{{canManage}}" loading="{{inviteCreating}}" disabled="{{inviteCreating}}" bindtap="handleInvite">邀请成员</button>
-          <button class="button-ghost" bindtap="handleAcceptInvite">加入团队</button>
         </view>
       </view>
 
@@ -149,7 +141,7 @@
     </view>
   </view>
 
-  <view class="sheet-mask" wx:if="{{joinOpen}}" bindtap="handleCloseJoin" catchtouchmove="handleSheetTap">
+  <view class="sheet-mask" wx:if="{{!isDetail && joinOpen}}" bindtap="handleCloseJoin" catchtouchmove="handleSheetTap">
     <view class="sheet" catchtap="handleSheetTap">
       <form bindsubmit="handleJoinTeam">
         <view class="sheet-heading"><view><text class="sheet-title">加入团队</text><text class="sheet-desc">填写队友发来的邀请码，验证后加入。</text></view><button class="sheet-close" bindtap="handleCloseJoin" disabled="{{joinLoading || joinPasting}}" aria-label="关闭加入团队">×</button></view>

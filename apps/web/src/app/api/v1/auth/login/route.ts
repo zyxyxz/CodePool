@@ -6,6 +6,7 @@ import { createSessionToken } from "@/server/auth";
 import { audit } from "@/server/audit";
 import { signedMemberAvatarUrl } from "@/server/avatar";
 import { db } from "@/server/db";
+import { walletName } from "@/server/profile";
 import { env } from "@/server/env";
 import { writablePlatformSettings } from "@/server/quota";
 import { enforceRateLimit } from "@/server/rate-limit";
@@ -100,17 +101,16 @@ export async function POST(request: NextRequest) {
 
       if (existing) {
         db.prepare(
-          `UPDATE users SET nickname = COALESCE(?, nickname),
-           union_id = COALESCE(?, union_id), last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        ).run(input.nickname || null, profile.unionId, existing.id);
+          `UPDATE users SET union_id = COALESCE(?, union_id), last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        ).run(profile.unionId, existing.id);
         return existing.id;
       }
 
       writablePlatformSettings();
       const newUserId = randomUUID();
       const inserted = db.prepare(
-        `INSERT OR IGNORE INTO users (id, open_id, union_id, nickname)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT OR IGNORE INTO users (id, open_id, union_id, nickname, profile_completed)
+         VALUES (?, ?, ?, ?, 0)`,
       ).run(
         newUserId,
         profile.openId,
@@ -126,9 +126,8 @@ export async function POST(request: NextRequest) {
           throw new ApiError(403, "账号已被停用，请联系管理员", "USER_DISABLED");
         }
         db.prepare(
-          `UPDATE users SET nickname = COALESCE(?, nickname),
-           union_id = COALESCE(?, union_id), last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        ).run(input.nickname || null, profile.unionId, existing.id);
+          `UPDATE users SET union_id = COALESCE(?, union_id), last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        ).run(profile.unionId, existing.id);
         return existing.id;
       }
 
@@ -136,7 +135,7 @@ export async function POST(request: NextRequest) {
       const slug = `pool-${newUserId.slice(0, 12)}`;
       db.prepare("INSERT INTO teams (id, name, slug, owner_id) VALUES (?, ?, ?, ?)").run(
         teamId,
-        "我的代码池",
+        input.nickname ? walletName(input.nickname) : "我的密钥钱包",
         slug,
         newUserId,
       );
@@ -150,7 +149,7 @@ export async function POST(request: NextRequest) {
     const storedUser = db
       .prepare(
         `SELECT id, open_id AS openId, nickname, avatar_url AS avatarUrl,
-         avatar_version AS avatarVersion,
+         avatar_version AS avatarVersion, profile_completed AS profileCompleted,
          created_at AS createdAt, last_login_at AS lastLoginAt FROM users WHERE id = ?`,
       )
       .get(userId) as {
@@ -159,12 +158,14 @@ export async function POST(request: NextRequest) {
         nickname: string;
         avatarUrl: string | null;
         avatarVersion: number;
+        profileCompleted: number;
         createdAt: string;
         lastLoginAt: string;
       };
     const { avatarVersion, ...publicUser } = storedUser;
     const user = {
       ...publicUser,
+      profileCompleted: Boolean(storedUser.profileCompleted),
       avatarUrl: signedMemberAvatarUrl(storedUser.id, avatarVersion, storedUser.avatarUrl),
     };
     const teams = db

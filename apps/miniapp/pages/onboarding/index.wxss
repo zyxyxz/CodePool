@@ -1,0 +1,15 @@
+.onboarding-page { padding-top: 64rpx; }
+.eyebrow { font-size: 21rpx; letter-spacing: 3rpx; color: var(--cp-accent); }
+.welcome-title { display: block; margin: 20rpx 0; font-size: 48rpx; font-weight: 600; }
+.welcome-desc { display: block; font-size: 26rpx; line-height: 1.8; color: var(--cp-muted); margin-bottom: 40rpx; }
+.setup-card { padding: 40rpx 32rpx; }
+.setup-avatar { margin: 0 auto; background: transparent; display: flex; flex-direction: column; gap: 16rpx; color: var(--cp-accent); }
+.setup-avatar image, .avatar-placeholder { width: 136rpx; height: 136rpx; border-radius: 44rpx; background: var(--cp-tint); }
+.avatar-placeholder { display: flex; align-items: center; justify-content: center; font-size: 56rpx; font-weight: 300; }
+.avatar-label { font-size: 26rpx; }
+.album-link { margin: 10rpx auto 20rpx; background: transparent; color: var(--cp-muted); font-size: 23rpx; }
+.field-label { display: block; font-size: 25rpx; margin: 20rpx 0 16rpx; }
+.wallet-hint, .privacy-note { display: block; color: var(--cp-muted); font-size: 23rpx; line-height: 1.8; margin-top: 20rpx; }
+.privacy-note { text-align: center; }
+.setup-error { display: block; color: #B42318; font-size: 25rpx; line-height: 1.6; margin-top: 24rpx; }
+.setup-submit { margin-top: 32rpx; }

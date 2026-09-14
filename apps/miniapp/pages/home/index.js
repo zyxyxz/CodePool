@@ -1,6 +1,6 @@
 const api = require('../../utils/api');
 const { copyText } = require('../../utils/clipboard');
-const { submittedNickname, notifyNicknameReview } = require('../../utils/nickname');
+const { notifyNicknameReview } = require('../../utils/nickname');
 const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../utils/theme');
 const {
   KIND_LABELS,
@@ -165,7 +165,7 @@ Page({
       if (this.handleSessionError(error, session) || session !== app.globalData.token) return;
       this.setData({
         loading: false,
-        error: friendlyError(error, '代码池加载失败'),
+        error: friendlyError(error, '密钥加载失败'),
         offline: Boolean(error.offline) || !app.globalData.networkConnected,
       });
     }
@@ -322,9 +322,8 @@ Page({
     }
     this.setData({ loginLoading: true });
     try {
-      const nickname = submittedNickname(e);
-      app.setStoredProfile({ ...this.data.loginProfile, nickname });
       await app.ensureLogin(true);
+      if (app.needsProfileSetup && app.needsProfileSetup()) return;
       this.setData({ needsLogin: false });
       await this.bootstrap();
     } catch (error) {
@@ -542,7 +541,7 @@ Page({
     if (!this.data.teams.length) {
       wx.showModal({
         title: '先创建团队',
-        content: '内容需要归属一个团队代码池。',
+        content: '内容需要归属一个团队空间。',
         confirmText: '去创建',
         success: (res) => { if (res.confirm) this.goTeam(); },
       });
@@ -608,7 +607,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: 'CodePool · 团队安全代码池',
+      title: 'CodePool · 团队密钥钱包',
       path: '/pages/home/index',
     };
   },

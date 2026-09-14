@@ -5,7 +5,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const miniappRoot = path.resolve(__dirname, '..');
-const source = fs.readFileSync(path.join(miniappRoot, 'pages/team/index.js'), 'utf8');
+const source = fs.readFileSync(path.join(miniappRoot, 'pages/team/controller.js'), 'utf8');
 const teamA = { teamId: 'team-a', name: '研发团队', themeColor: '#15803D', role: 'owner', memberCount: 2, itemCount: 3 };
 const teamB = { teamId: 'team-b', name: '产品团队', themeColor: '#2563EB', role: 'admin', memberCount: 1, itemCount: 0 };
 
@@ -42,7 +42,9 @@ function mount(overrides = {}) {
     readClipboard: async () => 'pasted-invite-token',
     ...overrides.clipboard,
   };
+  const module = { exports: {} };
   vm.runInNewContext(source, {
+    module,
     require(name) {
       if (name.endsWith('/api')) return api;
       if (name.endsWith('/clipboard')) return {
@@ -53,10 +55,11 @@ function mount(overrides = {}) {
     },
     Page(definition) { page = definition; },
     getApp: () => app,
-    wx: { showToast: (options) => toasts.push(options), showShareMenu: () => undefined, ...overrides.wx },
+    wx: { showToast: (options) => toasts.push(options), showShareMenu: () => undefined, navigateTo() {}, switchTab() {}, ...overrides.wx },
     setTimeout(callback) { timers.set(++timerId, callback); return timerId; },
     clearTimeout(id) { timers.delete(id); },
   });
+  page = module.exports(Boolean(overrides.detail));
   page.setData = function setData(updates, callback) {
     for (const [key, value] of Object.entries(updates)) {
       const keys = key.split('.');
@@ -68,8 +71,61 @@ function mount(overrides = {}) {
   };
   page.setData({ loading: false, teams: [structuredClone(teamA), structuredClone(teamB)], currentTeam: structuredClone(teamA), canManage: true });
   page.ensureInviteOwner();
+  page.onLoad({ teamId: overrides.teamId || teamA.teamId });
   return { page, app, api, clipboard, toasts, copied, updates, timers };
 }
+
+test('team list loads cards without fetching member or invitation details', async () => {
+  let detailRequests = 0;
+  const { page } = mount({ api: {
+    fetchTeamMembers: async () => { detailRequests++; return []; },
+    fetchTeamInvites: async () => { detailRequests++; return []; },
+  } });
+  await page.loadTeams();
+  assert.equal(page.data.teams.length, 2);
+  assert.match(page.data.teams[1].cardStyle, /--cp-accent/);
+  assert.equal(detailRequests, 0);
+});
+
+test('opening a team card navigates without switching the active workspace', () => {
+  let url;
+  const { page, app } = mount({ wx: { navigateTo: (options) => { url = options.url; } } });
+  page.handleOpenTeam({ currentTarget: { dataset: { teamid: teamB.teamId } } });
+  assert.equal(url, '/pages/team/detail?teamId=team-b');
+  assert.equal(app.globalData.activeTeamId, teamA.teamId);
+});
+
+test('detail resolves its route team, and only entering its code pool switches workspace', async () => {
+  let destination;
+  const { page, app } = mount({ detail: true, teamId: teamB.teamId, wx: { switchTab: ({ url }) => { destination = url; } } });
+  await page.loadTeams();
+  assert.equal(page.data.currentTeam.teamId, teamB.teamId);
+  assert.equal(app.globalData.activeTeamId, teamA.teamId);
+  page.handleEnterWorkspace();
+  assert.equal(app.globalData.activeTeamId, teamB.teamId);
+  assert.equal(destination, '/pages/home/index');
+});
+
+test('missing detail team cannot silently show or enter a different team', async () => {
+  const { page, app } = mount({ detail: true, teamId: 'removed-team' });
+  await page.loadTeams();
+  assert.equal(page.data.currentTeam, null);
+  assert.match(page.data.error, /不可访问/);
+  page.handleEnterWorkspace();
+  assert.equal(app.globalData.activeTeamId, teamA.teamId);
+});
+
+test('add card offers create or join; detail cannot open join', () => {
+  let sheet;
+  const { page } = mount({ wx: { showActionSheet: (options) => { sheet = options; } } });
+  page.handleAddTeam();
+  assert.deepEqual(Array.from(sheet.itemList), ['创建团队', '加入团队']);
+  sheet.success({ tapIndex: 1 });
+  assert.equal(page.data.joinOpen, true);
+  const detail = mount({ detail: true }).page;
+  detail.handleAcceptInvite();
+  assert.equal(detail.data.joinOpen, false);
+});
 
 test('team editor submits the native name and chosen theme, updating the shared team state', async () => {
   const { page, app, updates, toasts } = mount();

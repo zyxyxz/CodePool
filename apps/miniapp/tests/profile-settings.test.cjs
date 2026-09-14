@@ -199,7 +199,7 @@ test('failed profile PATCH leaves the saved nickname unchanged and allows retry'
 });
 
 for (const pageName of ['home', 'team', 'profile']) {
-  test(`${pageName} login uses the native submitted nickname and rejects an empty reviewed form`, async () => {
+  test(`${pageName} login authenticates without changing stored profile; setup belongs to onboarding`, async () => {
     const harness = createHarness({ signedOut: true });
     const page = harness.pageFor(pageName);
     page.setData({ legalConsent: true });
@@ -209,13 +209,61 @@ for (const pageName of ['home', 'team', 'profile']) {
     page.initialize = async () => {};
 
     await page.handleLogin(nicknameForm(''));
-    assert.equal(loginCalls, 0);
-    await page.handleLogin(nicknameForm('微信登录昵称'));
     assert.equal(loginCalls, 1);
-    assert.equal(harness.app.getStoredProfile().nickname, '微信登录昵称');
+    await page.handleLogin(nicknameForm('微信登录昵称'));
+    assert.equal(loginCalls, 2);
+    assert.equal(harness.app.getStoredProfile().nickname, '原昵称');
     assert.equal(page.data.loginLoading, false);
   });
 }
+
+test('onboarding rejects missing nickname or avatar and keeps failed saves retryable', async () => {
+  const h = createHarness();
+  h.app.globalData.user.profileCompleted = false;
+  const page = h.pageFor('onboarding');
+  let saves = 0;
+  h.app.syncStoredProfile = async () => { saves++; throw new Error('网络中断'); };
+  await page.handleSubmit(nicknameForm(''));
+  assert.match(page.data.error, /昵称/);
+  await page.handleSubmit(nicknameForm('小满'));
+  assert.match(page.data.error, /头像/);
+  assert.equal(saves, 0);
+  page.setData({ avatarUrl: 'wxfile://chosen.png' });
+  await page.handleSubmit(nicknameForm('小满'));
+  assert.equal(saves, 1);
+  assert.equal(page.data.saving, false);
+  assert.equal(page.data.nickname, '小满');
+  assert.equal(page.data.error, '网络中断');
+});
+
+test('onboarding navigates only after server confirms completion and then consumes pending invite', async () => {
+  const h = createHarness();
+  h.app.globalData.user.profileCompleted = false;
+  const page = h.pageFor('onboarding');
+  page.setData({ avatarUrl: 'wxfile://chosen.png' });
+  const events = [];
+  global.wx.reLaunch = ({ url }) => events.push(url);
+  h.app.consumePendingInvite = async () => events.push('invite');
+  h.app.syncStoredProfile = async () => {};
+  await page.handleSubmit(nicknameForm('小满'));
+  assert.equal(events.length, 0);
+  h.app.syncStoredProfile = async () => { h.app.globalData.user.profileCompleted = true; };
+  await page.handleSubmit(nicknameForm('小满'));
+  assert.deepEqual(events, ['invite', '/pages/home/index']);
+});
+
+test('unfinished setup preserves invitations instead of consuming or dropping them', async () => {
+  const h = createHarness();
+  h.app.globalData.user.profileCompleted = false;
+  h.app.globalData.pendingInviteToken = 'pending-invite';
+  await h.app.consumePendingInvite();
+  assert.equal(h.requests.length, 0);
+  assert.equal(h.app.globalData.pendingInviteToken, 'pending-invite');
+  let destination;
+  global.wx.reLaunch = ({ url, complete }) => { destination = url; complete(); };
+  assert.equal(h.app.openProfileSetup(), true);
+  assert.equal(destination, '/pages/onboarding/index');
+});
 
 test('settings signed-out access makes no account request and guards cancellation', async () => {
   const harness = createHarness({ signedOut: true });

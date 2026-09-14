@@ -193,7 +193,7 @@ Page({
     const team = this.data.teams[this.data.teamIndex];
     const title = this.data.form.title.trim();
     const content = this.data.form.content;
-    if (!team) return '请选择团队代码池';
+    if (!team) return '请选择团队空间';
     if (!this.data.editing && team.role === 'guest') return '访客不能创建内容，请联系管理员';
     if (!title) return '请输入标题';
     if (title.length > 120) return '标题不能超过 120 个字符';

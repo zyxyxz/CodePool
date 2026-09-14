@@ -1,3 +1,18 @@
+.list-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12rpx; margin: 8rpx 0 24rpx; color: var(--cp-muted); font-size: 23rpx; }
+.team-card { display: block; width: 100%; margin: 0 0 24rpx; padding: 30rpx; text-align: left; line-height: 1.5; border: 1rpx solid var(--cp-border); border-radius: 28rpx; background: linear-gradient(120deg, var(--cp-hero-start), var(--cp-hero-end)); color: var(--cp-ink); }
+.team-card::after, .add-team-card::after { border: 0; }
+.team-card-top { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
+.team-role { color: var(--cp-accent); font-size: 23rpx; }
+.current-badge { padding: 5rpx 14rpx; border-radius: 20rpx; background: var(--cp-surface); color: var(--cp-accent); font-size: 21rpx; }
+.team-card-main { display: flex; align-items: center; gap: 20rpx; margin: 20rpx 0 12rpx; }
+.team-card-name { flex: 1; min-width: 0; overflow-wrap: break-word; font-size: 36rpx; font-weight: 600; }
+.team-card-arrow { flex: none; color: var(--cp-accent); font-size: 44rpx; }
+.team-card-meta { color: var(--cp-muted); font-size: 24rpx; }
+.add-team-card { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 28rpx 20rpx 36rpx; margin-top: 8rpx; border: 2rpx dashed var(--cp-accent); border-radius: 28rpx; background: transparent; line-height: 1.6; color: var(--cp-accent); }
+.add-team-plus { font-size: 48rpx; font-weight: 300; }
+.add-team-title { font-size: 29rpx; font-weight: 600; }
+.add-team-desc { margin-top: 8rpx; color: var(--cp-muted); font-size: 23rpx; white-space: normal; }
+
 .offline-bar {
   margin: -32rpx -32rpx 24rpx;
   padding: 16rpx;

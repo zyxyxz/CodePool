@@ -1,2 +1,2 @@
 const createTeamPage = require('./controller');
-Page(createTeamPage());
+Page(createTeamPage(true));

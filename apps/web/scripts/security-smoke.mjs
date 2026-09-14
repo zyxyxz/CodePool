@@ -41,6 +41,16 @@ async function login(suffix) {
   });
   expectStatus(result, 201, `login ${suffix}`);
   assert.match(result.response.headers.get("cache-control") || "", /no-store/);
+  const setup = await call('/api/v1/auth/me', {
+    method: 'PATCH',
+    headers: bearer(result.body.data.accessToken),
+    body: JSON.stringify({ nickname: `Smoke ${suffix}`, avatar: {
+      mimeType: 'image/png',
+      data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    } }),
+  });
+  expectStatus(setup, 200, `complete profile ${suffix}`);
+  assert.equal(setup.body.data.user.profileCompleted, true);
   return {
     token: result.body.data.accessToken,
     userId: result.body.data.user.id,

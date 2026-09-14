@@ -1,7 +1,9 @@
 {
   "pages": [
     "pages/home/index",
+    "pages/onboarding/index",
     "pages/team/index",
+    "pages/team/detail",
     "pages/logs/index",
     "pages/profile/index",
     "pages/settings/index",
@@ -28,7 +30,7 @@
     "list": [
       {
         "pagePath": "pages/home/index",
-        "text": "代码池",
+        "text": "密钥",
         "iconPath": "assets/icons/home.png",
         "selectedIconPath": "assets/icons/home-active.png"
       },

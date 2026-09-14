@@ -1,8 +1,10 @@
 {
   "name": "codepool",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": true,
-  "workspaces": ["apps/web"],
+  "workspaces": [
+    "apps/web"
+  ],
   "scripts": {
     "dev": "npm run dev -w @codepool/web",
     "build": "npm run build -w @codepool/web",

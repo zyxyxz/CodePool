@@ -28,6 +28,38 @@ test.after(() => {
   rmSync(testDirectory, { recursive: true, force: true });
 });
 
+test('new members stay gated until nickname and avatar are both persisted; wallet follows nickname', async () => {
+  const db = await dbPromise;
+  const { userId, token } = await member();
+  db.prepare("UPDATE users SET profile_completed = 0, nickname = '微信用户' WHERE id = ?").run(userId);
+  const teamId = randomUUID();
+  db.prepare('INSERT INTO teams(id,name,slug,owner_id) VALUES (?, ?, ?, ?)').run(teamId, '我的密钥钱包', `pool-${userId.slice(0, 12)}`, userId);
+  const route = await meRoutePromise;
+  const { requireMember } = await authPromise;
+  const get = () => authenticatedGetRequest('/api/v1/auth/me', token);
+  await assert.rejects(() => requireMember(get()), /请先设置昵称和头像/);
+  const nicknameOnly = await route.PATCH(authenticatedJsonRequest('/api/v1/auth/me', token, { nickname: '小满' }, 'PATCH'));
+  assert.equal((await nicknameOnly.json()).data.user.profileCompleted, false);
+  await assert.rejects(() => requireMember(get()), /请先设置昵称和头像/);
+  const response = await route.PATCH(authenticatedJsonRequest('/api/v1/auth/me', token, { nickname: '小满', avatar: { data: pngBytes.toString('base64'), mimeType: 'image/png' } }, 'PATCH'));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).data.user.profileCompleted, true);
+  assert.equal((db.prepare('SELECT name FROM teams WHERE id = ?').get(teamId) as { name: string }).name, '小满的密钥钱包');
+  await requireMember(get());
+  await route.PATCH(authenticatedJsonRequest('/api/v1/auth/me', token, { nickname: '林间' }, 'PATCH'));
+  assert.equal((db.prepare('SELECT name FROM teams WHERE id = ?').get(teamId) as { name: string }).name, '林间的密钥钱包');
+  db.prepare("UPDATE teams SET name = '自己命名的钱包' WHERE id = ?").run(teamId);
+  await route.PATCH(authenticatedJsonRequest('/api/v1/auth/me', token, { nickname: '新昵称' }, 'PATCH'));
+  assert.equal((db.prepare('SELECT name FROM teams WHERE id = ?').get(teamId) as { name: string }).name, '自己命名的钱包');
+});
+
+test('old members keep access without being forced through setup', async () => {
+  const { userId, token } = await member();
+  const db = await dbPromise;
+  assert.equal((db.prepare('SELECT profile_completed AS value FROM users WHERE id = ?').get(userId) as { value: number }).value, 1);
+  await (await authPromise).requireMember(authenticatedGetRequest('/api/v1/auth/me', token));
+});
+
 async function member() {
   const db = await dbPromise;
   const { createSessionToken } = await authPromise;

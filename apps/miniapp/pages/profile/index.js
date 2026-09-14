@@ -130,9 +130,8 @@ Page({
     }
     this.setData({ loginLoading: true });
     try {
-      const nickname = submittedNickname(e);
-      app.setStoredProfile({ ...this.data.profile, nickname });
       await app.ensureLogin(true);
+      if (app.needsProfileSetup && app.needsProfileSetup()) return;
       this.applySession();
     } catch (error) {
       wx.showToast({ title: friendlyError(error, '登录失败'), icon: 'none' });

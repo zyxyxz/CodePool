@@ -1,7 +1,7 @@
 <view class="page" style="{{themeStyle}}">
   <view class="intro">
     <text class="eyebrow">{{editing ? 'EDIT SECURE ITEM' : 'NEW SECURE ITEM'}}</text>
-    <text class="title">{{editing ? '编辑共享内容' : '放入团队代码池'}}</text>
+    <text class="title">{{editing ? '编辑共享内容' : '放入团队空间'}}</text>
     <text class="desc">正文会加密保存。开始前确认团队、成员范围和内容有效期。</text>
   </view>
 
@@ -75,6 +75,6 @@
     </view>
 
     <view class="safe-note">保存后，查看、编辑、复制和分享会记录到团队审计中；审计不包含正文。</view>
-    <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{editing ? '保存修改' : '保存到代码池'}}</button>
+    <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{editing ? '保存修改' : '保存到密钥'}}</button>
   </block>
 </view>

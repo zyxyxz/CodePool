@@ -12,7 +12,7 @@
     <view class="audit-header">
       <text class="eyebrow">SECURITY AUDIT</text>
       <text class="page-title">团队安全审计</text>
-      <text class="page-desc">用于追溯关键操作；不记录代码池正文或 TOTP 密钥。</text>
+      <text class="page-desc">用于追溯关键操作；不记录密钥正文或 TOTP 密钥。</text>
     </view>
 
     <picker wx:if="{{teams.length}}" mode="selector" range="{{teams}}" range-key="name" value="{{teamIndex}}" bindchange="handleTeamChange">

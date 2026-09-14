@@ -1,0 +1,20 @@
+<view class="page onboarding-page" style="{{themeStyle}}">
+  <text class="eyebrow">WELCOME TO CODEPOOL</text>
+  <text class="welcome-title">先认识一下你</text>
+  <text class="welcome-desc">设置昵称和头像，开启你的密钥钱包。昵称不必使用真实姓名，头像也不必是本人照片。</text>
+  <view class="card setup-card"><form bindsubmit="handleSubmit">
+    <button class="setup-avatar" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{saving || avatarProcessing}}" aria-label="选择微信头像">
+      <image wx:if="{{avatarUrl}}" src="{{avatarUrl}}" mode="aspectFill" />
+      <text wx:else class="avatar-placeholder">＋</text>
+      <text class="avatar-label">{{avatarProcessing ? '处理中…' : '选择微信头像'}}</text>
+    </button>
+    <button class="album-link" bindtap="handleAlbum" disabled="{{saving || avatarProcessing}}">也可以从相册或相机选择</button>
+    <text class="field-label">你的昵称</text>
+    <input class="input" type="nickname" name="nickname" value="{{nickname}}" placeholder="填写昵称，可选择微信昵称" maxlength="64" disabled="{{saving || avatarProcessing}}" bindnicknamereview="handleNicknameReview" />
+    <text class="wallet-hint">默认空间将命名为「昵称的密钥钱包」</text>
+    <text wx:if="{{error}}" class="setup-error" role="alert">{{error}}</text>
+    <button class="button-primary setup-submit" form-type="submit" loading="{{saving}}" disabled="{{saving || avatarProcessing}}">保存并开始使用</button>
+  </form></view>
+  <text class="privacy-note" bindtap="goPrivacy">昵称和头像用于展示成员身份 · 查看隐私政策</text>
+  <button class="album-link" bindtap="handleLogout" disabled="{{saving || avatarProcessing}}">暂不设置，退出登录</button>
+</view>

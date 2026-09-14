@@ -196,8 +196,23 @@ App({
     });
   },
 
-  async awaitReady() {
+  needsProfileSetup() {
+    return Boolean(this.globalData.token && this.globalData.user && this.globalData.user.profileCompleted === false);
+  },
+
+  openProfileSetup() {
+    if (!this.needsProfileSetup()) return false;
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    if (!this._openingProfile && (!pages.length || pages[pages.length - 1].route !== 'pages/onboarding/index')) {
+      this._openingProfile = true;
+      wx.reLaunch({ url: '/pages/onboarding/index', complete: () => { this._openingProfile = false; } });
+    }
+    return true;
+  },
+
+  async awaitReady(options = {}) {
     if (this._restorePromise) await this._restorePromise;
+    if (!options.allowIncompleteProfile && this.openProfileSetup()) return false;
     return Boolean(this.globalData.token);
   },
 
@@ -274,17 +289,17 @@ App({
       const loginResult = await wx.login();
       if (!loginResult.code) throw new Error(loginResult.errMsg || '微信登录失败');
       const profile = this.getStoredProfile();
-      const result = await api.login(loginResult.code, profile);
+      const result = await api.login(loginResult.code, { openId: profile.openId });
       if (!result.token) throw new Error('服务端未返回登录凭证');
       api.setToken(result.token);
       this.globalData.token = result.token;
       this.globalData.user = result.user || null;
-      await this.refreshMe({ preserveLocalAvatar: true });
-      try {
-        await this.syncStoredProfile({ updateNickname: false });
-      } catch (error) {
-        wx.showToast({ title: error.message || '已登录，个人资料同步失败', icon: 'none' });
+      if (this.needsProfileSetup()) {
+        await this.refreshMe();
+        this.openProfileSetup();
+        return result.token;
       }
+      await this.refreshMe();
       await this.consumePendingInvite();
       return result.token;
     })();
@@ -554,6 +569,7 @@ App({
   },
 
   async consumePendingInvite() {
+    if (!this.globalData.user || this.needsProfileSetup()) return null;
     const token = this.globalData.pendingInviteToken;
     if (!token || !this.globalData.token || this._consumingInvite) return null;
     this._consumingInvite = true;

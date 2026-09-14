@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import { db } from "./db";
 import { env } from "./env";
+import { ApiError } from './api';
 
 const jwtKey = new TextEncoder().encode(env.jwtSecret);
 const issuer = "codepool";
@@ -51,7 +52,7 @@ export async function verifySessionToken(token: string): Promise<Session> {
   };
 }
 
-export async function requireMember(request: NextRequest) {
+export async function requireMember(request: NextRequest, options: { allowIncompleteProfile?: boolean } = {}) {
   const value = request.headers.get("authorization");
   if (!value?.startsWith("Bearer ")) throw new Error("UNAUTHORIZED");
   let session: Session;
@@ -61,6 +62,10 @@ export async function requireMember(request: NextRequest) {
     throw new Error("UNAUTHORIZED");
   }
   assertMemberSession(session);
+  if (!options.allowIncompleteProfile) {
+    const user = db.prepare('SELECT profile_completed AS complete FROM users WHERE id = ?').get(session.userId) as { complete: number };
+    if (!user.complete) throw new ApiError(403, '请先设置昵称和头像', 'PROFILE_INCOMPLETE');
+  }
   return session;
 }
 

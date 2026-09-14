@@ -10,6 +10,7 @@ import {
   signedMemberAvatarUrl,
 } from "@/server/avatar";
 import { db } from "@/server/db";
+import { renameDefaultWallet } from '@/server/profile';
 import { enforceRateLimit } from "@/server/rate-limit";
 
 const profileSchema = z.object({
@@ -23,7 +24,7 @@ function userProfile(userId: string) {
   const user = db
     .prepare(
       `SELECT id, open_id AS openId, nickname, avatar_url AS avatarUrl,
-       avatar_version AS avatarVersion, created_at AS createdAt,
+       avatar_version AS avatarVersion, profile_completed AS profileCompleted, created_at AS createdAt,
        last_login_at AS lastLoginAt
        FROM users WHERE id = ? AND status = 'active'`,
     )
@@ -33,19 +34,21 @@ function userProfile(userId: string) {
       nickname: string;
       avatarUrl: string | null;
       avatarVersion: number;
+      profileCompleted: number;
       createdAt: string;
       lastLoginAt: string;
     } | undefined;
   if (!user) return undefined;
   return {
     ...user,
+    profileCompleted: Boolean(user.profileCompleted),
     avatarUrl: signedMemberAvatarUrl(user.id, user.avatarVersion, user.avatarUrl),
   };
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireMember(request);
+    const session = await requireMember(request, { allowIncompleteProfile: true });
     const user = userProfile(session.userId);
     if (!user) throw new Error("UNAUTHORIZED");
     const teams = db
@@ -66,7 +69,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await requireMember(request);
+    const session = await requireMember(request, { allowIncompleteProfile: true });
     enforceRateLimit(request, {
       namespace: "profile-update-user",
       subject: `user:${session.userId}`,
@@ -96,7 +99,9 @@ export async function PATCH(request: NextRequest) {
         .get(session.userId, session.sessionVersion);
       if (!current) throw new Error("UNAUTHORIZED");
       if (input.nickname !== undefined) {
+        const previous = db.prepare('SELECT nickname FROM users WHERE id = ?').get(session.userId) as { nickname: string };
         db.prepare("UPDATE users SET nickname = ? WHERE id = ?").run(input.nickname, session.userId);
+        renameDefaultWallet(session.userId, previous.nickname, input.nickname);
         audit({
           request,
           actorId: session.userId,
@@ -132,6 +137,9 @@ export async function PATCH(request: NextRequest) {
           },
         });
       }
+      db.prepare(`UPDATE users SET profile_completed = 1 WHERE id = ?
+        AND avatar_blob IS NOT NULL AND length(trim(nickname)) > 0
+        AND nickname NOT IN ('微信用户', 'CodePool 用户')`).run(session.userId);
       return userProfile(session.userId);
     });
     return ok({ user: update.immediate() });
