@@ -1,3 +1,4 @@
+<view wx:if="{{!vaultLocked}}">
 <view class="page home-page" style="{{themeStyle}}">
   <view class="offline-bar" wx:if="{{offline}}">当前处于离线状态，已展示的信息可能不是最新</view>
 
@@ -138,3 +139,5 @@
     </block>
   </block>
 </view>
+</view>
+<view wx:else class="vault-curtain">CodePool · 已锁定</view>

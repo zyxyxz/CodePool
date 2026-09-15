@@ -48,7 +48,7 @@ function userProfile(userId: string) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireMember(request, { allowIncompleteProfile: true });
+    const session = await requireMember(request, { allowIncompleteProfile: true, allowLocked: true });
     const user = userProfile(session.userId);
     if (!user) throw new Error("UNAUTHORIZED");
     const teams = db

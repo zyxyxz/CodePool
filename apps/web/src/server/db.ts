@@ -199,6 +199,20 @@ const migrations = [
   ), updated_at = CURRENT_TIMESTAMP
   WHERE name = '我的代码池' AND slug = 'pool-' || substr(owner_id, 1, 12);
   `,
+  `
+  CREATE TABLE vault_locks (
+    user_id TEXT PRIMARY KEY REFERENCES users(id), pin_salt TEXT NOT NULL, pin_hash TEXT NOT NULL,
+    failures INTEGER NOT NULL DEFAULT 0, blocked_until INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE TABLE vault_unlocks (
+    token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+    session_hash TEXT NOT NULL, expires_at INTEGER NOT NULL
+  );
+  CREATE TABLE vault_challenges (
+    challenge TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+    session_hash TEXT NOT NULL, expires_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 declare global {

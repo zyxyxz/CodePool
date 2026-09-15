@@ -8,6 +8,12 @@ const { normalizeThemeColor } = require('./theme');
 
 let authToken = wx.getStorageSync('CODEPOOL_TOKEN') || '';
 let unauthorizedHandler = null;
+let lockEnabled = false;
+let unlockToken = '';
+let unlockExpires = 0;
+let lockEpoch = 0;
+const unlocked = () => Boolean(unlockToken && Date.now() < unlockExpires);
+const lockError = () => new ApiError('请先解锁密钥钱包', { code: 'VAULT_LOCKED', statusCode: 423 });
 
 class ApiError extends Error {
   constructor(message, options = {}) {
@@ -45,6 +51,7 @@ function buildHeader(headers = {}) {
     ...headers,
   };
   if (authToken) next.Authorization = `Bearer ${authToken}`;
+  if (unlocked()) next['X-CodePool-Unlock'] = unlockToken;
   return next;
 }
 
@@ -69,6 +76,9 @@ function request(options) {
     preserveEmptyKeys = [],
     preserveNullKeys = [],
   } = options;
+  const protectedRequest = lockEnabled && authToken && !['/auth/lock', '/auth/login', '/auth/me', '/config'].includes(url);
+  const epoch = lockEpoch;
+  if (protectedRequest && !unlocked()) return Promise.reject(lockError());
   return new Promise((resolve, reject) => {
     wx.request({
       url: `${BASE_URL}${API_PREFIX}${url}`,
@@ -78,12 +88,17 @@ function request(options) {
       timeout: REQUEST_TIMEOUT,
       success(res) {
         try {
+          if (protectedRequest && (epoch !== lockEpoch || !unlocked())) { reject(lockError()); return; }
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(unwrapResponse(res.data, res.statusCode));
             return;
           }
           const payload = res.data || {};
           const responseCode = payload.error || (res.statusCode === 401 ? 'UNAUTHORIZED' : 'REQUEST_FAILED');
+          if (responseCode === 'VAULT_LOCKED' || responseCode === 'PIN_SETUP_REQUIRED') {
+            const app = getApp();
+            if (app && app.lockVault) app.lockVault();
+          }
           const disabledAccount = responseCode === 'ACCOUNT_DISABLED' || responseCode === 'USER_DISABLED';
           if (res.statusCode === 401 || disabledAccount) {
             setToken('');
@@ -216,6 +231,13 @@ function listFromResponse(response) {
 }
 
 const api = {
+  enableVaultLock() { lockEnabled = true; unlockToken = ''; unlockExpires = 0; lockEpoch++; },
+  clearUnlock() { unlockToken = ''; unlockExpires = 0; lockEpoch++; },
+  setUnlock(grant) { unlockToken = grant.token; unlockExpires = Date.now() + grant.expiresIn * 1000; },
+  isUnlocked: unlocked,
+  lockStatus: () => request({ url: '/auth/lock' }),
+  unlock: (data) => request({ url: '/auth/lock', method: 'POST', data }),
+  revokeUnlock: () => request({ url: '/auth/lock', method: 'DELETE' }),
   ApiError,
   setToken,
   onUnauthorized,

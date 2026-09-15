@@ -1,3 +1,4 @@
+<view wx:if="{{!vaultLocked}}">
 <view class="page" style="{{themeStyle}}">
   <view class="intro">
     <text class="eyebrow">{{editing ? 'EDIT SECURE ITEM' : 'NEW SECURE ITEM'}}</text>
@@ -78,3 +79,5 @@
     <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{editing ? '保存修改' : '保存到密钥'}}</button>
   </block>
 </view>
+</view>
+<view wx:else class="vault-curtain">CodePool · 已锁定</view>

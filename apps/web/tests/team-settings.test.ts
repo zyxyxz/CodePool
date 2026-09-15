@@ -10,6 +10,8 @@ const testDirectory = mkdtempSync(join(tmpdir(), "codepool-team-settings-"));
 process.env.CODEPOOL_DATABASE_PATH = join(testDirectory, "codepool.db");
 process.env.CODEPOOL_JWT_SECRET = "codepool-team-settings-test-secret-value";
 process.env.WECHAT_MOCK_LOGIN = "true";
+let unlockTestHeaders: (token: string) => Record<string, string>;
+test.before(async () => { ({ unlockTestHeaders } = await import('./helpers/lock')); });
 const dbPromise = import("../src/server/db").then((module) => module.db);
 const authPromise = import("../src/server/auth");
 const routePromise = import("../src/app/api/v1/teams/[teamId]/route");
@@ -32,7 +34,7 @@ async function fixture(role: Role = "owner") {
 type Fixture = Awaited<ReturnType<typeof fixture>>;
 function request(token: string, body?: Record<string, unknown>, method = body ? "PATCH" : "GET") {
   return new Request("http://localhost/api/v1/teams/test", {
-    method, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    method, headers: { ...unlockTestHeaders(token), authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   }) as never;
 }

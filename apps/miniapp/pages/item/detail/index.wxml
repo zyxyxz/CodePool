@@ -1,3 +1,4 @@
+<view wx:if="{{!vaultLocked}}">
 <view class="page" style="{{themeStyle}}">
   <view class="offline-bar" wx:if="{{offline}}">当前网络不可用</view>
 
@@ -76,3 +77,5 @@
     <view class="safe-note">查看、编辑、复制与分享会产生必要审计记录；记录不包含正文。</view>
   </block>
 </view>
+</view>
+<view wx:else class="vault-curtain">CodePool · 已锁定</view>

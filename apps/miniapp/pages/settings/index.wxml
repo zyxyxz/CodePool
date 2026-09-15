@@ -1,3 +1,4 @@
+<view wx:if="{{!vaultLocked}}">
 <view class="page settings-page" style="{{themeStyle}}">
   <view class="about-header">
     <view class="brand-mark">CP</view>
@@ -7,6 +8,10 @@
   </view>
 
   <view class="section-label">关于与隐私</view>
+  <view class="card menu-card" wx:if="{{!needsLogin}}">
+    <view class="menu-row" bindtap="handleLockNow"><text class="menu-title">立即锁定密钥钱包</text><text class="arrow">›</text></view>
+    <view class="menu-row" bindtap="handleChangePin"><text class="menu-title">修改安全 PIN</text><text class="arrow">›</text></view>
+  </view>
   <view class="card menu-card">
     <view class="menu-row" bindtap="goPrivacy"><text class="menu-title">隐私政策</text><text class="arrow">›</text></view>
     <view class="menu-row" bindtap="goTerms"><text class="menu-title">用户协议</text><text class="arrow">›</text></view>
@@ -29,3 +34,5 @@
     <button class="button-ghost logout-button" bindtap="handleLogout">退出登录</button>
   </block>
 </view>
+</view>
+<view wx:else class="vault-curtain">CodePool · 已锁定</view>

@@ -1,3 +1,4 @@
+<view wx:if="{{!vaultLocked}}">
 <view class="page" style="{{themeStyle}}">
   <view class="share-header">
     <view class="brand-mark">CP</view>
@@ -39,3 +40,5 @@
     <button class="button-ghost home-button" bindtap="goHome">进入 CodePool</button>
   </block>
 </view>
+</view>
+<view wx:else class="vault-curtain">CodePool · 已锁定</view>

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 const baseUrl = (process.env.CODEPOOL_SMOKE_BASE_URL || "http://127.0.0.1:3100").replace(/\/$/, "");
 const runId = randomUUID().slice(0, 12);
+const unlockGrants = new Map();
 const forwardedIp = `198.51.100.${Number.parseInt(runId.slice(0, 2), 16) % 200 + 1}`;
 
 async function call(path, init = {}) {
@@ -23,7 +24,7 @@ async function call(path, init = {}) {
 }
 
 function bearer(token) {
-  return { authorization: `Bearer ${token}` };
+  return { authorization: `Bearer ${token}`, ...(unlockGrants.has(token) ? { 'x-codepool-unlock': unlockGrants.get(token) } : {}) };
 }
 
 function expectStatus(result, expected, label) {
@@ -51,6 +52,12 @@ async function login(suffix) {
   });
   expectStatus(setup, 200, `complete profile ${suffix}`);
   assert.equal(setup.body.data.user.profileCompleted, true);
+  const unlock = await call('/api/v1/auth/lock', {
+    method: 'POST', headers: bearer(result.body.data.accessToken),
+    body: JSON.stringify({ action: 'setup', pin: '827194', confirmPin: '827194' }),
+  });
+  expectStatus(unlock, 200, 'set up wallet PIN');
+  unlockGrants.set(result.body.data.accessToken, unlock.body.data.token);
   return {
     token: result.body.data.accessToken,
     userId: result.body.data.user.id,

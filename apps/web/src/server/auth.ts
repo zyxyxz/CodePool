@@ -6,6 +6,7 @@ import type { NextRequest } from "next/server";
 import { db } from "./db";
 import { env } from "./env";
 import { ApiError } from './api';
+import { assertVaultUnlocked } from './vault-lock';
 
 const jwtKey = new TextEncoder().encode(env.jwtSecret);
 const issuer = "codepool";
@@ -52,7 +53,7 @@ export async function verifySessionToken(token: string): Promise<Session> {
   };
 }
 
-export async function requireMember(request: NextRequest, options: { allowIncompleteProfile?: boolean } = {}) {
+export async function requireMember(request: NextRequest, options: { allowIncompleteProfile?: boolean; allowLocked?: boolean } = {}) {
   const value = request.headers.get("authorization");
   if (!value?.startsWith("Bearer ")) throw new Error("UNAUTHORIZED");
   let session: Session;
@@ -66,6 +67,7 @@ export async function requireMember(request: NextRequest, options: { allowIncomp
     const user = db.prepare('SELECT profile_completed AS complete FROM users WHERE id = ?').get(session.userId) as { complete: number };
     if (!user.complete) throw new ApiError(403, '请先设置昵称和头像', 'PROFILE_INCOMPLETE');
   }
+  if (!options.allowLocked && !options.allowIncompleteProfile) assertVaultUnlocked(request, session.userId);
   return session;
 }
 

@@ -24,6 +24,8 @@ const emptyDeletion = {
 };
 
 Page({
+  handleLockNow() { app.lockVault(); },
+  handleChangePin() { wx.navigateTo({ url: '/pages/lock/index?change=1' }); },
   data: {
     ...getThemeData(),
     loading: true,

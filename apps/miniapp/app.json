@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/home/index",
+    "pages/lock/index",
     "pages/onboarding/index",
     "pages/team/index",
     "pages/team/detail",

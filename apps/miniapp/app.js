@@ -155,6 +155,10 @@ App({
   },
 
   onLaunch(options) {
+    api.enableVaultLock();
+    this._lockEnabled = true;
+    this._lockEpoch = 0;
+    this._foreground = true;
     api.onUnauthorized(() => this.clearSession(true));
     this.captureInvite(options);
     this.globalData.profile = this.getStoredProfile();
@@ -171,11 +175,57 @@ App({
   },
 
   onShow(options) {
+    this._foreground = true;
     this.captureInvite(options);
+    if (this._lockEnabled && this.globalData.user && !this.needsProfileSetup()) this.openVaultLock();
     if (this.globalData.token && this.globalData.pendingInviteToken) {
       this.consumePendingInvite();
     }
     this.refreshPublicConfig();
+  },
+
+  onHide() {
+    this._foreground = false;
+    if (this._lockEnabled) this.lockVault(false);
+  },
+
+  isVaultLocked() { return Boolean(this._lockEnabled && this.globalData.token && !api.isUnlocked()); },
+
+  lockVault(navigate = true) {
+    if (this.globalData.token && this.globalData.user && !this.needsProfileSetup()) api.revokeUnlock().catch(() => {});
+    this._lockEpoch = (this._lockEpoch || 0) + 1;
+    clearTimeout(this._unlockTimer);
+    api.clearUnlock();
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    for (const page of pages) {
+      if (page.route === 'pages/lock/index' || page.route === 'pages/legal/index' || page.route === 'pages/onboarding/index') continue;
+      if (page.hideAllCodes) page.hideAllCodes();
+      if (page.clearTicker) page.clearTicker();
+      if (page.hideCode) page.hideCode();
+      if (page.hideContent) page.hideContent();
+      page._plainContent = '';
+      if (page.data.form) page.setData({ form: Object.fromEntries(Object.keys(page.data.form).map((key) => [key, ''])) });
+      page.setData({ vaultLocked: true, content: '', code: '', secret: '', shareToken: '', shareUrl: '', inviteToken: '', accounts: [], visibleAccounts: [], items: [], visibleItems: [], visibleVaultItems: [] });
+    }
+    if (navigate && this._foreground) this.openVaultLock();
+  },
+
+  openVaultLock() {
+    if (!this.isVaultLocked() || this.needsProfileSetup()) return false;
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    if (!this._openingLock && (!pages.length || pages[pages.length - 1].route !== 'pages/lock/index')) {
+      this._openingLock = true;
+      wx.reLaunch({ url: '/pages/lock/index', complete: () => { this._openingLock = false; } });
+    }
+    return true;
+  },
+
+  acceptUnlock(grant, epoch) {
+    if (epoch !== this._lockEpoch || !this.globalData.token || !this._foreground) return false;
+    api.setUnlock(grant);
+    clearTimeout(this._unlockTimer);
+    this._unlockTimer = setTimeout(() => this.lockVault(), grant.expiresIn * 1000);
+    return true;
   },
 
   captureInvite(options) {
@@ -213,6 +263,7 @@ App({
   async awaitReady(options = {}) {
     if (this._restorePromise) await this._restorePromise;
     if (!options.allowIncompleteProfile && this.openProfileSetup()) return false;
+    if (!options.allowLocked && !options.allowIncompleteProfile && this.openVaultLock()) return false;
     return Boolean(this.globalData.token);
   },
 
@@ -301,6 +352,7 @@ App({
       }
       await this.refreshMe();
       await this.consumePendingInvite();
+      this.openVaultLock();
       return result.token;
     })();
     try {
@@ -569,6 +621,7 @@ App({
   },
 
   async consumePendingInvite() {
+    if (this.isVaultLocked()) return null;
     if (!this.globalData.user || this.needsProfileSetup()) return null;
     const token = this.globalData.pendingInviteToken;
     if (!token || !this.globalData.token || this._consumingInvite) return null;
@@ -596,6 +649,7 @@ App({
   },
 
   clearSession(clearStorage = true) {
+    if (this._lockEnabled) this.lockVault(false);
     this.globalData.user = null;
     this.globalData.token = '';
     this.globalData.teams = [];

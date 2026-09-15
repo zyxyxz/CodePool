@@ -11,6 +11,8 @@ const jwtSecret = "codepool-profile-avatar-test-secret-value";
 process.env.CODEPOOL_DATABASE_PATH = join(testDirectory, "codepool.db");
 process.env.CODEPOOL_JWT_SECRET = jwtSecret;
 
+let unlockTestHeaders: (token: string) => Record<string, string>;
+test.before(async () => { ({ unlockTestHeaders } = await import('./helpers/lock')); });
 const dbPromise = import("../src/server/db").then((module) => module.db);
 const authPromise = import("../src/server/auth");
 const meRoutePromise = import("../src/app/api/v1/auth/me/route");
@@ -78,7 +80,7 @@ function authenticatedJsonRequest(path: string, token: string, body: Record<stri
   return new Request(`http://localhost${path}`, {
     method,
     headers: {
-      authorization: `Bearer ${token}`,
+      ...unlockTestHeaders(token), authorization: `Bearer ${token}`,
       "content-type": "application/json",
     },
     body: JSON.stringify(body),
@@ -88,7 +90,7 @@ function authenticatedJsonRequest(path: string, token: string, body: Record<stri
 function authenticatedGetRequest(path: string, token: string) {
   const url = new URL(`http://localhost${path}`);
   const request = new Request(url, {
-    headers: { authorization: `Bearer ${token}` },
+    headers: { ...unlockTestHeaders(token), authorization: `Bearer ${token}` },
   });
   Object.defineProperty(request, "nextUrl", { value: url });
   return request as never;

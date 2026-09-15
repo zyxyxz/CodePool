@@ -1,0 +1,18 @@
+<view class="page lock-page" style="{{themeStyle}}">
+  <text class="lock-symbol">●</text><text class="lock-brand">CodePool</text>
+  <text class="lock-title">{{changing ? '修改安全 PIN' : configured ? '密钥钱包已锁定' : '设置安全 PIN'}}</text>
+  <text class="lock-desc">{{configured ? '验证身份后，才能访问你的密钥与团队空间。' : '先设置 6 位数字 PIN，之后可使用指纹、人脸或 PIN 解锁。'}}</text>
+  <view wx:if="{{loading}}" class="card">正在读取安全设置…</view>
+  <view wx:else class="card"><form bindsubmit="submit">
+    <button wx:if="{{configured && authMode && !changing}}" class="button-primary biometric" bindtap="biometric" disabled="{{busy}}" loading="{{busy}}">{{authLabel}}</button>
+    <text class="pin-label">{{changing ? '新 PIN' : configured ? '使用 PIN 解锁' : '输入 PIN'}}</text>
+    <input type="number" password="true" name="pin" value="{{pin}}" bindinput="onPin" maxlength="6" class="input pin" placeholder="6 位数字" disabled="{{busy}}" />
+    <block wx:if="{{!configured || changing}}"><text class="pin-label">确认 PIN</text><input type="number" password="true" name="confirmPin" value="{{confirmPin}}" bindinput="onConfirm" maxlength="6" class="input pin" placeholder="再次输入" disabled="{{busy}}" /></block>
+    <text wx:if="{{error}}" class="lock-error">{{error}}</text>
+    <button class="button-primary submit" form-type="submit" disabled="{{busy}}" loading="{{busy}}">{{changing ? '保存新 PIN' : configured ? '解锁' : '设置并解锁'}}</button>
+  </form></view>
+  <text class="lock-note">切到后台立即锁定 · 解锁最长有效 10 分钟</text>
+  <button class="button-ghost" wx:if="{{configured}}" bindtap="forgot">忘记 PIN？</button>
+  <button class="button-ghost" bindtap="loadStatus" disabled="{{busy}}">重新读取安全设置</button>
+  <button class="button-ghost" bindtap="logout" disabled="{{busy}}">退出登录</button>
+</view>

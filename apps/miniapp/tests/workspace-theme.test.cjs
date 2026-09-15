@@ -44,6 +44,7 @@ function mount(overrides = {}) {
   };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), {
     App(value) { app = value; }, wx,
+    setTimeout, clearTimeout,
     require(name) { return name.endsWith('/theme') ? runtimeTheme : api; },
   });
   app.globalData = { ...app.globalData, token: 'test-session', user: { id: 'me' }, activeTeamId: teamA.teamId, teams: [teamA, teamB] };
@@ -224,6 +225,10 @@ test('stored theme survives reopening while awaiting metadata and resets when se
   app.globalData.activeThemeColor = '#15803D';
   api.onUnauthorized = () => {};
   api.setToken = () => {};
+  api.enableVaultLock = () => {};
+  api.clearUnlock = () => {};
+  api.isUnlocked = () => false;
+  api.revokeUnlock = async () => {};
   app.observeNetwork = () => {};
   app.tryRestoreSession = async () => true;
   app.onLaunch({});

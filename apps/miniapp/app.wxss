@@ -243,3 +243,4 @@ button[disabled] {
   font-size: 23rpx;
   line-height: 1.6;
 }
+.vault-curtain { position: fixed; inset: 0; z-index: 99999; display: flex; justify-content: center; align-items: center; background: #F5F7F2; color: #426B5A; font-size: 30rpx; }
