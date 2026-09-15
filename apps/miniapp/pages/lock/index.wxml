@@ -1,7 +1,7 @@
 <view class="page lock-page" style="{{themeStyle}}">
   <text class="lock-symbol">●</text><text class="lock-brand">CodePool</text>
   <text class="lock-title">{{changing ? '修改安全 PIN' : configured ? '密钥钱包已锁定' : '设置安全 PIN'}}</text>
-  <text class="lock-desc">{{configured ? '验证身份后，才能访问你的密钥与团队空间。' : '先设置 6 位数字 PIN。进入钱包后，可在设置中开启本机生物识别。'}}</text>
+  <text class="lock-desc">{{configured ? '验证身份后，才能访问你的密钥与团队空间。' : '设置 6 位数字 PIN 作为备用，还可同时开启本机生物识别。'}}</text>
   <view wx:if="{{loading}}" class="card">正在读取安全设置…</view>
   <view wx:else class="card"><form bindsubmit="submit">
     <block wx:if="{{configured && bioEnabled && authMode && !changing}}">
@@ -14,7 +14,12 @@
     <text class="pin-label">{{changing ? '新 PIN' : configured ? '使用 PIN 解锁' : '输入 PIN'}}</text>
     <input type="number" password="true" name="pin" value="{{pin}}" bindinput="onPin" maxlength="6" class="input pin" placeholder="6 位数字" disabled="{{busy}}" />
     <block wx:if="{{!configured || changing}}"><text class="pin-label">确认 PIN</text><input type="number" password="true" name="confirmPin" value="{{confirmPin}}" bindinput="onConfirm" maxlength="6" class="input pin" placeholder="再次输入" disabled="{{busy}}" /></block>
-    <button class="button-primary submit" form-type="submit" disabled="{{busy}}" loading="{{busy}}">{{changing ? '保存新 PIN' : configured ? '解锁' : '设置并解锁'}}</button>
+    <view wx:if="{{!configured && authMode}}" class="setup-biometric">
+      <view class="setup-biometric-copy"><text class="pin-label">同时开启{{authLabel}}</text><text class="setup-biometric-note">下次优先识别，PIN 作为备用。可随时在设置中关闭。</text></view>
+      <switch checked="{{setupBiometric}}" bindchange="onSetupBiometric" disabled="{{busy}}" color="{{theme.accent}}" aria-label="同时开启{{authLabel}}" />
+    </view>
+    <text wx:if="{{!configured && !authMode}}" class="setup-biometric-note">{{bioChecking ? '正在检测本机生物识别…' : bioHint}}</text>
+    <button class="button-primary submit" form-type="submit" disabled="{{busy || bioChecking}}" loading="{{busy}}">{{changing ? '保存新 PIN' : configured ? '解锁' : setupBiometric && authMode ? '设置 PIN 并开启识别' : '设置并解锁'}}</button>
     </block>
     <text wx:if="{{error}}" class="lock-error" role="alert">{{error}}</text>
   </form></view>

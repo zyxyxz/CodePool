@@ -62,3 +62,23 @@ test('settings enables only after verified authentication; failed enable stays o
     assert.equal(enabled, false);
   }
 });
+test('first PIN setup opts in by default; opt-out, unsupported and cancellation never enable it', async () => {
+  for (const scenario of ['default', 'opt-out', 'unsupported', 'cancel', 'existing-off']) {
+    let page; let enabled = false; let attempts = 0; let action; let finished = false;
+    const app = { _lockEpoch: 1, globalData: { user: { id: 'new' } }, acceptUnlock: () => true, consumePendingInvite: async () => {}, isVaultLocked: () => false };
+    const bio = { setEnabled: (_id, value) => { enabled = value; }, authenticate: async () => { attempts++; if (scenario === 'cancel') throw new Error('cancel'); return { token: 'bio' }; } };
+    vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/lock/index.js'), 'utf8'), {
+      Page: (p) => { page = p; }, getApp: () => app, wx: { showToast() {}, reLaunch() { finished = true; } },
+      require: (name) => name.endsWith('/api') ? { unlock: async (input) => { action = input.action; return { token: 'pin' }; } } : name.endsWith('/biometric') ? bio : { getThemeData: () => ({}) },
+    });
+    page.setData = (data) => Object.assign(page.data, data);
+    page.setData({ loading: false, bioChecking: false, authMode: scenario === 'unsupported' ? '' : 'facial', configured: scenario === 'existing-off' });
+    assert.equal(page.data.setupBiometric, true);
+    if (scenario === 'opt-out') page.onSetupBiometric({ detail: { value: false } });
+    await page.submit({ detail: { value: { pin: '827194', confirmPin: '827194' } } });
+    assert.equal(action, scenario === 'existing-off' ? 'pin' : 'setup');
+    assert.equal(enabled, scenario === 'default');
+    assert.equal(attempts, ['default', 'cancel'].includes(scenario) ? 1 : 0);
+    assert.equal(page.data.configured, true); assert.equal(finished, true);
+  }
+});
