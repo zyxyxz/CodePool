@@ -1,5 +1,7 @@
 # Dokploy 生产部署
 
+2026-09-15 更新：推送 main 由 GitHub webhook 直接通知 Dokploy，拉取、构建和部署均在 Dokploy 完成。GitHub Actions 仅保留手动检查，不自动构建或晋级 production 分支。生产数据卷与环境变量保持不变。健康检查的提交号来自容器构建时的 Git 引用，不再逐次手工更新构建参数。旧 CI 部署脚本不属于当前发布链路。
+
 ## 当前环境
 
 - 生产域名：<https://codepool.apps.aisp24.com>

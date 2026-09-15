@@ -33,3 +33,4 @@ pnpm-debug.log*
 
 # Misc
 coverage/
+codepool-build.json

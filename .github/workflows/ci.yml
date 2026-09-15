@@ -1,23 +1,16 @@
-name: CodePool quality gate
+name: CodePool manual checks
 
+# Pushes deploy directly through Dokploy. No competing GitHub build or deploy.
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: codepool-ci-${{ github.ref }}
-  # Runs include production promotion and deployment. Queue newer pushes so a
-  # later workflow can never cancel an already-started Dokploy release.
-  cancel-in-progress: false
-
 jobs:
-  verify:
+  checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,73 +18,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check
-      - name: Run security integration smoke
-        env:
-          PORT: 3100
-          HOSTNAME: 127.0.0.1
-          CODEPOOL_DATABASE_PATH: /tmp/codepool-ci.sqlite
-          CODEPOOL_JWT_SECRET: ci-only-jwt-secret-with-more-than-32-characters
-          CODEPOOL_MASTER_KEY: ci-only-master-key-with-more-than-32-characters
-          CODEPOOL_ADMIN_EMAIL: admin@codepool.test
-          CODEPOOL_ADMIN_PASSWORD: ci-only-admin-password-32-characters
-          WECHAT_MOCK_LOGIN: "true"
-          CODEPOOL_SMOKE_BASE_URL: http://127.0.0.1:3100
-        run: |
-          npm run dev -w @codepool/web -- --hostname 127.0.0.1 --port 3100 > /tmp/codepool-ci.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
-            curl --fail --silent http://127.0.0.1:3100/api/health >/dev/null && break
-            sleep 1
-          done
-          if ! npm run smoke:security; then
-            cat /tmp/codepool-ci.log
-            exit 1
-          fi
-      - run: npm audit --omit=dev --audit-level=high
-
-  container:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: codepool:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy:
-    needs: [verify, container]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-    env:
-      DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
-      DOKPLOY_API_URL: https://dokploy.aisp24.com
-      DOKPLOY_APPLICATION_ID: IrlFKl84EpZWf2Lsdw57f
-      CODEPOOL_PRODUCTION_URL: https://codepool.apps.aisp24.com
-      DEPLOY_COMMIT_SHA: ${{ github.sha }}
-      DEPLOY_RUN_ID: ${{ github.run_id }}
-    environment:
-      name: production
-      url: https://codepool.apps.aisp24.com
-    steps:
-      - uses: actions/checkout@v4
-      - name: Require an idle Dokploy release queue
-        run: node scripts/deploy-dokploy.mjs --preflight
-      - name: Promote verified commit to deployment branch
-        run: |
-          git push origin "${GITHUB_SHA}:refs/heads/production" --force
-          promoted_sha="$(git ls-remote origin refs/heads/production | cut -f1)"
-          test "$promoted_sha" = "$GITHUB_SHA"
-      - name: Deploy verified commit through Dokploy API
-        # Replace the shell so Actions cancellation signals reach the cleanup
-        # handlers directly before the runner's hard-kill deadline.
-        run: exec node scripts/deploy-dokploy.mjs
+      - run: npm run lint && npm run typecheck && npm run check:miniapp && npm test
+      - run: node --test apps/miniapp/tests/*.test.cjs

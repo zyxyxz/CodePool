@@ -1,14 +1,15 @@
 const api = require('../../utils/api');
+const bio = require('../../utils/biometric');
 const { getThemeData, applyPageTheme } = require('../../utils/theme');
 const app = getApp();
-const nativeCall = (name, options = {}) => new Promise((resolve, reject) => {
-  if (typeof wx[name] !== 'function') { reject(new Error('当前设备不支持生物识别，请使用 PIN')); return; }
-  wx[name]({ ...options, success: resolve, fail: reject });
-});
 Page({
-  data: { ...getThemeData(), loading: true, configured: false, changing: false, pin: '', confirmPin: '', busy: false, error: '', authMode: '', authLabel: '' },
+  data: { ...getThemeData(), loading: true, configured: false, changing: false, pin: '', confirmPin: '', busy: false, error: '', authMode: '', authLabel: '', bioEnabled: false, bioHint: '', showPin: true },
   onLoad(options) { this._change = options.change === '1'; },
   async onShow() {
+    this._visible = true;
+    // Native authentication can briefly return focus to this page. Do not
+    // restart a pending operation or automatically re-prompt after cancellation.
+    if (this.data.busy) return;
     applyPageTheme(this);
     if (!await app.awaitReady({ allowLocked: true })) {
       if (!app.globalData.token) wx.reLaunch({ url: '/pages/home/index' });
@@ -16,16 +17,19 @@ Page({
     }
     this.setData({ pin: '', confirmPin: '', changing: Boolean(this._change && api.isUnlocked()), busy: false });
     await this.loadStatus();
-    try {
-      const supported = await nativeCall('checkIsSupportSoterAuthentication');
-      for (const mode of ['facial', 'fingerPrint']) {
-        if (!(supported.supportMode || []).includes(mode)) continue;
-        const result = await nativeCall('checkIsSoterEnrolledInDevice', { checkAuthMode: mode });
-        if (result.isEnrolled) { this.setData({ authMode: mode, authLabel: mode === 'facial' ? '人脸识别解锁' : '指纹解锁' }); break; }
-      }
-    } catch { /* PIN remains available on unsupported devices. */ }
+    const capability = await bio.capability();
+    if (!this._visible) return;
+    const bioEnabled = bio.enabled(app.globalData.user?.id);
+    const preferBio = this.data.configured && !this.data.changing && bioEnabled && Boolean(capability.mode);
+    this.setData({ authMode: capability.mode, authLabel: `${capability.label}解锁`, bioEnabled, bioHint: capability.hint, showPin: !preferBio });
+    if (preferBio && !this._autoAttempted && !this.data.error) {
+      this._autoAttempted = true;
+      await this.biometric();
+    }
   },
-  onHide() { this.setData({ pin: '', confirmPin: '' }); },
+  onHide() { this._visible = false; this.setData({ pin: '', confirmPin: '' }); },
+  onUnload() { this._visible = false; },
+  usePin() { if (!this.data.busy) this.setData({ showPin: true, error: '', pin: '' }); },
   async loadStatus() {
     this.setData({ loading: true, error: '' });
     try { const state = await api.lockStatus(); this.setData({ configured: state.configured }); }
@@ -55,16 +59,14 @@ Page({
     finally { this.setData({ busy: false }); }
   },
   async biometric() {
-    if (this.data.busy || !this.data.configured || !this.data.authMode) return;
+    if (this.data.busy || !this.data.configured || !this.data.authMode || !this.data.bioEnabled || this.data.changing) return;
     const epoch = app._lockEpoch;
     this.setData({ busy: true, error: '' });
     try {
-      const { challenge } = await api.unlock({ action: 'challenge' });
-      const result = await nativeCall('startSoterAuthentication', { requestAuthModes: [this.data.authMode], challenge, authContent: '解锁 CodePool 密钥钱包' });
+      const grant = await bio.authenticate(api, this.data.authMode);
       if (epoch !== app._lockEpoch) throw new Error('已重新锁定，请重试');
-      const grant = await api.unlock({ action: 'biometric', resultJSON: result.resultJSON, signature: result.resultJSONSignature });
       await this.finish(grant, epoch);
-    } catch (error) { this.setData({ error: error.message || '生物识别未完成，请重试或输入 PIN' }); }
+    } catch (error) { this.setData({ error: error.message || '识别未完成，可重新识别或使用 PIN 解锁' }); }
     finally { this.setData({ busy: false }); }
   },
   forgot() { wx.showModal({ title: '忘记 PIN', content: '可先使用生物识别解锁，再到设置中修改 PIN。若两种方式均不可用，请联系客服进行身份核验。退出登录、清缓存不会重置 PIN。', showCancel: false }); },

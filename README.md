@@ -68,6 +68,10 @@ npm run db:init      # 初始化/升级数据库
 
 仓库根目录的 `Dockerfile` 会生成 Next.js standalone 镜像，监听 `3000` 端口。生产环境需要将持久化卷挂载到 `/app/apps/web/data`，并配置 `.env.example` 中的生产变量。健康检查路径为 `/api/health`。
 
+发布方式：推送 `main` → GitHub push webhook → Dokploy 拉取 `main`、构建 Docker 镜像并部署。GitHub Actions 不再随推送构建或发布，仅保留手动检查。发布前本地运行 `npm run check` 与小程序测试。旧 `scripts/deploy-dokploy.mjs` 属于原 CI 门禁流程，不用于当前自动部署。
+
+容器构建从 Git HEAD/refs 写入提交号供健康检查核对；请使用 Git 克隆目录作为构建上下文，不要使用缺少 Git 元数据的源码 ZIP。仅构建阶段读取引用文件，不复制 Git 凭据、历史或配置到运行镜像。部署后核对 `/api/health` 的 commit 与 main 一致。
+
 正式发布仍需要微信 AppSecret、运营主体、隐私指引/备案、异地备份和告警配置，详见[商用上线检查表](docs/LAUNCH_CHECKLIST.md)。
 
 更多说明：[产品范围](docs/PRODUCT.md) · [技术架构](docs/ARCHITECTURE.md) · [安全模型](docs/SECURITY.md) · [API](docs/API.md) · [设计系统](docs/DESIGN.md) · [部署运维](docs/DEPLOYMENT.md)

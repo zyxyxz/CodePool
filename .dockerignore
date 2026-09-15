@@ -1,4 +1,9 @@
-.git
+# Only non-secret revision pointers are available in the builder.
+.git/**
+!.git/HEAD
+!.git/refs
+!.git/refs/**
+!.git/packed-refs
 .github
 .next
 **/.next

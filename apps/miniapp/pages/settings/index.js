@@ -1,4 +1,5 @@
 const api = require('../../utils/api');
+const bio = require('../../utils/biometric');
 const { getThemeData, getActiveThemeColor, applyPageTheme } = require('../../utils/theme');
 const { CLIENT_VERSION } = require('../../config');
 const { formatDate, friendlyError } = require('../../utils/format');
@@ -32,15 +33,50 @@ Page({
     needsLogin: true,
     version: getVersion(),
     deletionLoading: false,
+    bioEnabled: false,
+    bioBusy: false,
+    bioMode: '',
+    bioLabel: '生物识别',
+    bioHint: '正在检测本机支持情况…',
     ...emptyDeletion,
   },
 
   async onShow() {
+    if (this.data.bioBusy) return;
     applyPageTheme(this, getActiveThemeColor(app));
     await app.awaitReady();
     const needsLogin = !app.globalData.token;
     this.setData({ loading: false, needsLogin, ...emptyDeletion });
-    if (!needsLogin) await this.loadDeletionStatus();
+    if (!needsLogin) await Promise.all([this.loadDeletionStatus(), this.loadBiometric()]);
+  },
+
+  async loadBiometric() {
+    const userId = app.globalData.user?.id;
+    const capability = await bio.capability();
+    if (userId !== app.globalData.user?.id) return;
+    this.setData({ bioEnabled: bio.enabled(userId), bioMode: capability.mode, bioLabel: capability.label, bioHint: capability.hint });
+  },
+
+  async toggleBiometric(e) {
+    if (this.data.bioBusy || app.isVaultLocked()) return;
+    const userId = app.globalData.user?.id;
+    const epoch = app._lockEpoch;
+    const enable = Boolean(e.detail.value);
+    this.setData({ bioBusy: true });
+    try {
+      if (enable) {
+        const capability = await bio.capability();
+        if (!capability.mode) throw new Error(capability.hint);
+        const grant = await bio.authenticate(api, capability.mode);
+        if (userId !== app.globalData.user?.id || !app.acceptUnlock(grant, epoch)) throw new Error('钱包已锁定，请解锁后重新设置');
+      }
+      bio.setEnabled(userId, enable);
+      this.setData({ bioEnabled: enable });
+      wx.showToast({ title: enable ? '已开启，下次优先识别' : '已关闭，改用 PIN 解锁', icon: 'none' });
+    } catch (error) {
+      this.setData({ bioEnabled: bio.enabled(userId) });
+      wx.showToast({ title: error.message || '未完成验证，设置未变更', icon: 'none' });
+    } finally { this.setData({ bioBusy: false }); }
   },
 
   async loadDeletionStatus() {
