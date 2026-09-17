@@ -177,7 +177,9 @@ App({
   onShow(options) {
     this._foreground = true;
     this.captureInvite(options);
-    if (this._lockEnabled && this.globalData.user && !this.needsProfileSetup()) this.openVaultLock();
+    // Timers may pause in the background. Recheck the absolute expiry before
+    // returning to any page, without extending the original unlock window.
+    if (this._lockEnabled && this.globalData.user && !this.needsProfileSetup() && !api.isUnlocked()) this.lockVault();
     if (this.globalData.token && this.globalData.pendingInviteToken) {
       this.consumePendingInvite();
     }
@@ -186,7 +188,9 @@ App({
 
   onHide() {
     this._foreground = false;
-    if (this._lockEnabled) this.lockVault(false);
+    // Native scanning/media pickers also background the app. Keep the current
+    // page and grant during its ten-minute lifetime; never persist the grant.
+    if (this._lockEnabled && !api.isUnlocked()) this.lockVault(false);
   },
 
   isVaultLocked() { return Boolean(this._lockEnabled && this.globalData.token && !api.isUnlocked()); },

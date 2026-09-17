@@ -173,8 +173,14 @@ Page({
   },
 
   async handleScan() {
+    const epoch = app._lockEpoch;
+    const token = app.globalData.token;
+    if (app.isVaultLocked()) { app.openVaultLock(); return; }
     try {
       const scan = await wx.scanCode({ onlyFromCamera: false, scanType: ['qrCode'] });
+      // Ignore results from an expired/previous session, even if the native
+      // scanner returns after the app's pages have been locked or replaced.
+      if (epoch !== app._lockEpoch || token !== app.globalData.token || app.isVaultLocked()) return;
       const parsed = parseOtpAuth(scan.result);
       if (!parsed) {
         wx.showToast({ title: '不是有效的 TOTP 二维码', icon: 'none' });

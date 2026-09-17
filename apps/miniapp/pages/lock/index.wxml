@@ -23,7 +23,7 @@
     </block>
     <text wx:if="{{error}}" class="lock-error" role="alert">{{error}}</text>
   </form></view>
-  <text class="lock-note">切到后台立即锁定 · 解锁最长有效 10 分钟</text>
+  <text class="lock-note">解锁后 10 分钟内免验证 · 到期或重新启动后锁定</text>
   <button class="button-ghost" wx:if="{{configured}}" bindtap="forgot">忘记 PIN？</button>
   <button class="button-ghost" bindtap="loadStatus" disabled="{{busy}}">重新读取安全设置</button>
   <button class="button-ghost" bindtap="logout" disabled="{{busy}}">退出登录</button>
